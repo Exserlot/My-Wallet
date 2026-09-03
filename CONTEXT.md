@@ -48,6 +48,14 @@ _Avoid_: Monthly Limit, Monthly Plan
 ส่วนของ Monthly Budget ที่จัดไว้ให้ Expense Category หนึ่งประเภท
 _Avoid_: Fixed Cost, Category Limit
 
+**Unallocated Budget**:
+ส่วนของ Monthly Budget ที่ยังไม่ได้จัดให้ Expense Category ใด และยังคงเป็นพื้นที่สำรองของ Budget Cycle นั้น
+_Avoid_: Savings, Remaining Balance, Budget Allocation
+
+**Overcommitted Budget**:
+สถานะของ Budget Cycle ที่ยอด Fixed Cost ซึ่งต้องกันไว้สูงกว่า Monthly Budget ทำให้ Unallocated Budget ติดลบ เพื่อแสดงภาระที่เกินงบโดยไม่ซ่อนหรือตัดรายการออก
+_Avoid_: Overspent Budget, Negative Wallet Balance
+
 **Budget Cycle**:
 ช่วงเวลาหนึ่งเดือนของ Monthly Budget ซึ่งเริ่มในวันที่ผู้ใช้กำหนดและสิ้นสุดก่อนวันเริ่มรอบถัดไป
 _Avoid_: Calendar Month, Accounting Period
@@ -55,6 +63,18 @@ _Avoid_: Calendar Month, Accounting Period
 **Fixed Cost**:
 Expense ที่คาดว่าจะเกิดซ้ำตามกำหนดและกัน Budget Allocation ไว้ล่วงหน้า แต่ยังไม่ถือเป็น Expense จริงจนกว่าจะยืนยันการจ่าย
 _Avoid_: Subscription, Budget Allocation, Recurring Transaction
+
+**Fixed Cost Schedule**:
+กฎที่กำหนดชื่อ หมวด ยอดประมาณการ Payment Wallet ความถี่ วันครบกำหนด และการแจ้งเตือนของ Fixed Cost โดยสามารถ Archive เพื่อหยุดสร้างรายการในอนาคตโดยยังเก็บประวัติเดิมไว้
+_Avoid_: Fixed Cost Occurrence, Transaction
+
+**Fixed Cost Occurrence**:
+Fixed Cost หนึ่งครั้งที่เกิดจาก Fixed Cost Schedule มีวันครบกำหนด สถานะ และยอดจริงของตนเอง
+_Avoid_: Fixed Cost Schedule, Automatic Expense
+
+**Payment Wallet**:
+Wallet ที่กำหนดไว้เป็นแหล่งจ่ายเริ่มต้นของ Fixed Cost โดยยังไม่ถูกหักยอดจนกว่าจะยืนยันการจ่ายจริง
+_Avoid_: Reserved Wallet, Budget Wallet
 
 **Bank Slip**:
 หลักฐานดิจิทัลจากธนาคารไทยสำหรับการโอนหรือชำระเงิน ซึ่งใช้ช่วยกรอกข้อมูลก่อนที่ผู้ใช้จะตรวจและยืนยันรายการ
