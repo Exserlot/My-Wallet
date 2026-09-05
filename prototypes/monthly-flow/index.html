@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>My Wallet — Monthly Flow Prototype</title>
+    <style>
+      :root {
+        --ink: #17211b;
+        --muted: #69746d;
+        --paper: #f4f5ef;
+        --card: #fffef9;
+        --green: #1d6f4a;
+        --green-soft: #dcecdf;
+        --orange: #c96c24;
+        --red: #b8453d;
+        --line: #dfe3da;
+        --shadow: 0 18px 50px rgba(30, 42, 34, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: #dfe4dd;
+        font-family: "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+      }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      .phone {
+        width: min(100%, 430px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 18px 18px 116px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .eyebrow { margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 4px; font-size: 26px; line-height: 1.25; }
+      h2 { margin-bottom: 12px; font-size: 18px; }
+      h3 { margin-bottom: 4px; font-size: 15px; }
+      .muted { color: var(--muted); }
+      .money { font-variant-numeric: tabular-nums; }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .stack { display: grid; gap: 12px; }
+      .card { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+      .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; background: #edf0e9; color: #4b574f; font-size: 12px; }
+      .chip.warn { background: #fff0db; color: #8e4b12; }
+      .progress { height: 9px; overflow: hidden; border-radius: 99px; background: #e6e9e2; }
+      .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+      .progress.danger > span { background: var(--red); }
+      .primary, .secondary, .icon-button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 14px;
+        font-weight: 750;
+      }
+      .primary { padding: 0 18px; color: white; background: var(--green); }
+      .secondary { padding: 0 16px; color: var(--green); background: var(--green-soft); }
+      .icon-button { width: 44px; color: white; background: var(--green); font-size: 22px; }
+      .section { margin-top: 22px; }
+      .list { display: grid; gap: 2px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--line); }
+      .list-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--card); }
+      .list-item .grow { flex: 1; min-width: 0; }
+      .list-item p { margin: 0; font-size: 12px; color: var(--muted); }
+      .dot { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; background: #edf0e9; }
+      .amount-negative { color: var(--red); font-weight: 750; }
+      .amount-positive { color: var(--green); font-weight: 750; }
+
+      .hero-balance { margin-top: 20px; padding: 20px; color: white; border-radius: 24px; background: linear-gradient(135deg, #164d36, #28805a); }
+      .hero-balance .total { margin: 6px 0 18px; font-size: 34px; font-weight: 800; }
+      .budget-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 10px; }
+      .budget-grid strong { display: block; margin-top: 6px; font-size: 20px; }
+      .fab { position: sticky; z-index: 3; bottom: 10px; float: right; display: flex; align-items: center; gap: 8px; padding: 0 17px; box-shadow: 0 10px 24px rgba(29, 111, 74, .3); }
+
+      .entry-hero { margin: 22px -18px 0; padding: 26px 20px 22px; color: white; background: #142a20; }
+      .type-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px; border-radius: 14px; background: rgba(255,255,255,.1); }
+      .type-tabs button { height: 38px; border: 0; border-radius: 10px; color: #d9e5dd; background: transparent; }
+      .type-tabs button.active { color: var(--ink); background: #fff; font-weight: 750; }
+      .amount-input { width: 100%; margin: 20px 0; border: 0; outline: 0; color: white; background: transparent; font-size: 42px; font-weight: 800; text-align: center; }
+      .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .quick-action { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); text-align: left; }
+      .quick-action b { display: block; margin-top: 10px; }
+
+      .today-header { margin: -18px -18px 0; padding: 24px 20px 70px; color: white; background: #22382d; }
+      .today-summary { margin: -50px 0 0; padding: 18px; border: 0; box-shadow: var(--shadow); }
+      .task { padding: 16px; border-left: 4px solid var(--orange); }
+      .task.danger { border-left-color: var(--red); }
+      .task-actions { display: flex; gap: 8px; margin-top: 12px; }
+      .task-actions button { flex: 1; }
+      .timeline { margin: 0; padding: 0; list-style: none; }
+      .timeline li { position: relative; padding: 0 0 18px 28px; }
+      .timeline li::before { content: ""; position: absolute; left: 6px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+      .timeline li::after { content: ""; position: absolute; left: 10px; top: 18px; bottom: 2px; width: 1px; background: var(--line); }
+      .timeline li:last-child::after { display: none; }
+
+      .bottom-nav { position: fixed; z-index: 5; left: 50%; bottom: 58px; width: min(calc(100% - 24px), 406px); transform: translateX(-50%); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 254, 249, .96); box-shadow: 0 12px 30px rgba(23,33,27,.14); backdrop-filter: blur(10px); }
+      .bottom-nav button { height: 42px; border: 0; border-radius: 12px; color: var(--muted); background: transparent; font-size: 12px; }
+      .bottom-nav button.active { color: var(--green); background: var(--green-soft); font-weight: 800; }
+      .prototype-switcher { position: fixed; z-index: 20; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px; color: white; border-radius: 999px; background: #101612; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+      .prototype-switcher button { width: 36px; height: 36px; border: 0; border-radius: 50%; color: white; background: #303a33; font-size: 18px; }
+      .prototype-label { min-width: 210px; text-align: center; font-size: 12px; }
+      .prototype-label b { display: block; font-size: 13px; }
+
+      .sheet-backdrop { position: fixed; z-index: 30; inset: 0; display: none; align-items: flex-end; justify-content: center; padding: 16px; background: rgba(10, 18, 13, .52); }
+      .sheet-backdrop.open { display: flex; }
+      .sheet { width: min(100%, 430px); max-height: 88vh; overflow: auto; padding: 20px; border-radius: 26px; background: var(--card); box-shadow: var(--shadow); }
+      .sheet-handle { width: 42px; height: 5px; margin: -8px auto 18px; border-radius: 99px; background: #ccd2c9; }
+      .field { display: grid; gap: 6px; margin-top: 14px; }
+      .field label { color: var(--muted); font-size: 12px; font-weight: 700; }
+      .field input { width: 100%; height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+      .sheet-footer { display: grid; grid-template-columns: .8fr 1.2fr; gap: 10px; margin-top: 20px; }
+      .slip-preview { display: grid; place-items: center; min-height: 150px; margin: 14px 0; border: 2px dashed #cad1c8; border-radius: 18px; background: #f2f5f0; color: var(--muted); text-align: center; }
+      .notice { padding: 10px 12px; border-radius: 12px; background: #fff0db; color: #7d481b; font-size: 12px; }
+      [hidden] { display: none !important; }
+
+      @media (min-width: 700px) {
+        body { padding: 28px 0; }
+        .phone { min-height: calc(100vh - 56px); border-radius: 28px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" class="phone"></main>
+
+    <nav class="bottom-nav" aria-label="เมนูหลัก">
+      <button data-nav="overview">ภาพรวม</button>
+      <button data-nav="transactions">รายการ</button>
+      <button data-nav="budget">งบเดือน</button>
+      <button data-nav="wallets">กระเป๋า</button>
+    </nav>
+
+    <div class="prototype-switcher" aria-label="สลับต้นแบบ">
+      <button id="previous" aria-label="แบบก่อนหน้า">←</button>
+      <div class="prototype-label"><span>PROTOTYPE</span><b id="variant-label"></b></div>
+      <button id="next" aria-label="แบบถัดไป">→</button>
+    </div>
+
+    <div id="entry-sheet" class="sheet-backdrop" role="dialog" aria-modal="true" aria-labelledby="entry-title">
+      <section class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="row"><div><p class="eyebrow">บันทึกด้วยมือ</p><h2 id="entry-title">เพิ่มรายจ่าย</h2></div><button class="secondary" data-close>ปิด</button></div>
+        <div class="type-tabs"><button class="active">รายจ่าย</button><button>รายรับ</button><button>โอนเงิน</button></div>
+        <div class="field"><label>จำนวนเงิน</label><input inputmode="decimal" value="250.00" /></div>
+        <div class="field"><label>หมวดหมู่</label><input value="อาหาร" /></div>
+        <div class="field"><label>จ่ายจากกระเป๋า</label><input value="K PLUS •• 4821" /></div>
+        <div class="field"><label>วันที่และเวลา</label><input value="วันนี้ 12:30" /></div>
+        <div class="sheet-footer"><button class="secondary" data-slip>อ่านจากสลิป</button><button class="primary" data-save>บันทึกรายการ</button></div>
+      </section>
+    </div>
+
+    <div id="slip-sheet" class="sheet-backdrop" role="dialog" aria-modal="true" aria-labelledby="slip-title">
+      <section class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="row"><div><p class="eyebrow">ข้อมูลช่วยกรอก</p><h2 id="slip-title">ตรวจข้อมูลจากสลิป</h2></div><button class="secondary" data-close>ปิด</button></div>
+        <div class="slip-preview">✓ อ่าน QR บนเครื่องแล้ว<br /><small>รูปยังไม่ถูกส่งออกจากเครื่อง</small></div>
+        <div class="notice">กรุณาตรวจยอด กระเป๋า และวันเวลาก่อนบันทึก</div>
+        <div class="field"><label>จำนวนเงิน</label><input value="1,290.00" /></div>
+        <div class="field"><label>จากกระเป๋า</label><input value="K PLUS •• 4821" /></div>
+        <div class="field"><label>ผู้รับ</label><input value="บริษัท อินเทอร์เน็ต จำกัด" /></div>
+        <div class="sheet-footer"><button class="secondary" data-close>ยกเลิก</button><button class="primary" data-save>ยืนยันและบันทึก</button></div>
+      </section>
+    </div>
+
+    <script>
+      // Three structurally different home-screen variants, switchable via ?variant=.
+      const variants = ['A', 'B', 'C'];
+      const names = {
+        A: 'A · ภาพรวมเดือน',
+        B: 'B · บันทึกเร็ว',
+        C: 'C · จัดการวันนี้',
+      };
+      const app = document.querySelector('#app');
+
+      function currentVariant() {
+        const value = new URLSearchParams(location.search).get('variant')?.toUpperCase();
+        return variants.includes(value) ? value : 'A';
+      }
+
+      function setVariant(value) {
+        const url = new URL(location.href);
+        url.searchParams.set('variant', value);
+        history.replaceState({}, '', url);
+        render();
+      }
+
+      function commonTransactions() {
+        return `
+          <div class="list">
+            <div class="list-item"><span class="dot">🍜</span><div class="grow"><h3>อาหารกลางวัน</h3><p>อาหาร · เงินสด · วันนี้</p></div><span class="amount-negative money">−฿85</span></div>
+            <div class="list-item"><span class="dot">💼</span><div class="grow"><h3>เงินเดือน</h3><p>รายรับ · K PLUS · 1 ก.ย.</p></div><span class="amount-positive money">+฿28,000</span></div>
+            <div class="list-item"><span class="dot">🚆</span><div class="grow"><h3>ค่าเดินทาง</h3><p>เดินทาง · TrueMoney · 1 ก.ย.</p></div><span class="amount-negative money">−฿52</span></div>
+          </div>`;
+      }
+
+      function variantA() {
+        return `
+          <header class="row"><div><p class="eyebrow">รอบ 1–30 กันยายน</p><h1>สวัสดี วันนี้ใช้เท่าไร?</h1></div><button class="icon-button" data-entry aria-label="เพิ่มรายการ">＋</button></header>
+          <section class="hero-balance"><p class="eyebrow" style="color:#cae2d3">เงินคงเหลือทุกกระเป๋า</p><div class="total money">฿42,680.50</div><div class="row"><span>ใช้เดือนนี้ ฿3,240</span><span>3 กระเป๋า ›</span></div></section>
+          <section class="section"><div class="row"><h2>งบเดือนนี้</h2><span class="chip">เหลือ ฿6,760</span></div><div class="card stack"><div class="row"><b>ใช้ไป 32%</b><span class="money">฿3,240 / ฿10,000</span></div><div class="progress"><span style="width:32%"></span></div><div class="budget-grid"><div><span class="muted">ยังไม่จัดสรร</span><strong class="money">฿1,500</strong></div><div><span class="muted">Fixed Cost</span><strong class="money">฿3,090</strong></div></div></div></section>
+          <section class="section"><div class="row"><h2>ใกล้ถึงกำหนด</h2><span class="chip warn">2 รายการ</span></div><div class="list"><div class="list-item"><span class="dot">🌐</span><div class="grow"><h3>ค่าอินเทอร์เน็ต</h3><p>ครบกำหนดพรุ่งนี้ · K PLUS</p></div><b class="money">฿1,290</b></div><div class="list-item"><span class="dot">🏠</span><div class="grow"><h3>ค่าเช่า</h3><p>ครบกำหนดใน 4 วัน · K PLUS</p></div><b class="money">฿1,800</b></div></div></section>
+          <section class="section"><div class="row"><h2>รายการล่าสุด</h2><span class="muted">ดูทั้งหมด</span></div>${commonTransactions()}</section>
+          <button class="primary fab" data-entry>＋ เพิ่มรายการ</button>`;
+      }
+
+      function variantB() {
+        return `
+          <header><p class="eyebrow">บันทึกก่อน ตรวจภาพรวมทีหลัง</p><h1>เพิ่มรายการ</h1></header>
+          <section class="entry-hero"><div class="type-tabs"><button class="active">รายจ่าย</button><button>รายรับ</button><button>โอนเงิน</button></div><input class="amount-input" aria-label="จำนวนเงิน" value="฿0.00" /><button class="primary" style="width:100%;background:#f1b96a;color:#39230b" data-entry>กรอกรายละเอียดต่อ</button></section>
+          <section class="section quick-grid"><button class="quick-action" data-slip><span class="dot">▣</span><b>อ่าน Bank Slip</b><small class="muted">ช่วยกรอกและตรวจซ้ำ</small></button><button class="quick-action" data-entry><span class="dot">↻</span><b>ใช้รายการล่าสุด</b><small class="muted">อาหาร · เงินสด</small></button></section>
+          <section class="section"><div class="row"><h2>สถานะเดือนนี้</h2><span class="chip">เหลือ 68%</span></div><div class="card stack"><div class="row"><div><p class="muted">งบคงเหลือ</p><h1 class="money">฿6,760</h1></div><div style="text-align:right"><p class="muted">เงินทุกกระเป๋า</p><b class="money">฿42,680</b></div></div><div class="progress"><span style="width:32%"></span></div><div class="row"><span class="chip warn">พรุ่งนี้มี 1 Fixed Cost</span><b>ดูงบ ›</b></div></div></section>
+          <section class="section"><div class="row"><h2>เพิ่งบันทึก</h2><span class="muted">แก้ไข</span></div>${commonTransactions()}</section>`;
+      }
+
+      function variantC() {
+        return `
+          <header class="today-header"><p class="eyebrow" style="color:#c4d5cb">ศุกร์ 5 กันยายน</p><h1>วันนี้มี 2 เรื่องต้องจัดการ</h1><p style="margin:8px 0 0;color:#dbe6df">เคลียร์รายการที่ถึงกำหนด แล้วค่อยดูภาพรวม</p></header>
+          <section class="card today-summary"><div class="row"><div><p class="muted">เหลือใช้เดือนนี้</p><h1 class="money">฿6,760</h1></div><div style="text-align:right"><p class="muted">จากงบ</p><b class="money">฿10,000</b></div></div><div class="progress"><span style="width:32%"></span></div></section>
+          <section class="section stack"><article class="card task danger"><div class="row"><div><span class="chip warn">ครบกำหนดพรุ่งนี้</span><h2 style="margin:9px 0 2px">ค่าอินเทอร์เน็ต</h2><p class="muted">ประมาณ ฿1,290 · K PLUS</p></div><b class="money">฿1,290</b></div><div class="task-actions"><button class="secondary" data-slip>ใช้สลิป</button><button class="primary" data-entry>ยืนยันจ่าย</button></div></article><article class="card task"><div class="row"><div><span class="chip">งบใกล้เต็ม</span><h2 style="margin:9px 0 2px">หมวดอาหาร</h2><p class="muted">เหลือ ฿320 จาก ฿2,500</p></div><b>87%</b></div><div class="progress danger"><span style="width:87%"></span></div></article></section>
+          <section class="section"><div class="row"><h2>ลำดับเงินเดือนนี้</h2><button class="secondary" data-entry>＋ บันทึก</button></div><ol class="timeline"><li><h3>วันนี้ · ใช้ไป ฿85</h3><p class="muted">อาหารกลางวัน · เงินสด</p></li><li><h3>พรุ่งนี้ · ต้องจ่าย ฿1,290</h3><p class="muted">ค่าอินเทอร์เน็ต · K PLUS</p></li><li><h3>9 ก.ย. · ต้องจ่าย ฿1,800</h3><p class="muted">ค่าเช่า · K PLUS</p></li><li><h3>สิ้นรอบ · คาดว่าเหลือ ฿3,670</h3><p class="muted">หากไม่มีรายจ่ายเพิ่ม</p></li></ol></section>`;
+      }
+
+      function render() {
+        const value = currentVariant();
+        app.innerHTML = value === 'A' ? variantA() : value === 'B' ? variantB() : variantC();
+        document.querySelector('#variant-label').textContent = names[value];
+        document.querySelectorAll('[data-nav]').forEach((button) => {
+          const active = button.dataset.nav === (value === 'B' ? 'transactions' : 'overview');
+          button.classList.toggle('active', active);
+          if (active) button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        wireActions();
+      }
+
+      function openSheet(id) {
+        document.querySelectorAll('.sheet-backdrop').forEach((sheet) => sheet.classList.remove('open'));
+        document.querySelector(id).classList.add('open');
+      }
+
+      function wireActions() {
+        document.querySelectorAll('[data-entry]').forEach((button) => button.addEventListener('click', () => openSheet('#entry-sheet')));
+        document.querySelectorAll('[data-slip]').forEach((button) => button.addEventListener('click', () => openSheet('#slip-sheet')));
+        document.querySelectorAll('.type-tabs button').forEach((button) => button.addEventListener('click', () => {
+          button.parentElement.querySelectorAll('button').forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+        }));
+      }
+
+      document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click', () => button.closest('.sheet-backdrop').classList.remove('open')));
+      document.querySelectorAll('[data-save]').forEach((button) => button.addEventListener('click', () => { button.textContent = 'บันทึกแล้ว ✓'; setTimeout(() => button.closest('.sheet-backdrop').classList.remove('open'), 550); }));
+      document.querySelector('#previous').addEventListener('click', () => { const index = variants.indexOf(currentVariant()); setVariant(variants[(index + variants.length - 1) % variants.length]); });
+      document.querySelector('#next').addEventListener('click', () => { const index = variants.indexOf(currentVariant()); setVariant(variants[(index + 1) % variants.length]); });
+      document.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        if (event.target.matches('input, textarea, [contenteditable]')) return;
+        const index = variants.indexOf(currentVariant());
+        setVariant(variants[(index + (event.key === 'ArrowRight' ? 1 : -1) + variants.length) % variants.length]);
+      });
+      document.querySelectorAll('.sheet-backdrop').forEach((backdrop) => backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.classList.remove('open'); }));
+      render();
+    </script>
+  </body>
+</html>
