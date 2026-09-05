@@ -76,6 +76,14 @@ _Avoid_: Fixed Cost Schedule, Automatic Expense
 Wallet ที่กำหนดไว้เป็นแหล่งจ่ายเริ่มต้นของ Fixed Cost โดยยังไม่ถูกหักยอดจนกว่าจะยืนยันการจ่ายจริง
 _Avoid_: Reserved Wallet, Budget Wallet
 
+**Shopping List**:
+รายการรวมของ Planned Purchase ที่ผู้ใช้อยากได้หรือต้องซื้อในอนาคต โดยไม่ผูกกับ Budget Cycle และไม่มีผลต่อ Budget หรือยอด Wallet จนกว่าจะซื้อจริง
+_Avoid_: Monthly Budget, Expense List, Cart
+
+**Planned Purchase**:
+สินค้าหนึ่งรายการใน Shopping List ซึ่งเก็บรายละเอียดและราคาประมาณเพื่อช่วยวางแผน และเปลี่ยนเป็นส่วนหนึ่งของ Expense เมื่อผู้ใช้ยืนยันว่าซื้อแล้ว
+_Avoid_: Expense, Fixed Cost, Budget Allocation
+
 **Bank Slip**:
 หลักฐานดิจิทัลจากธนาคารไทยสำหรับการโอนหรือชำระเงิน ซึ่งใช้ช่วยกรอกข้อมูลก่อนที่ผู้ใช้จะตรวจและยืนยันรายการ
 _Avoid_: Paper Receipt, Invoice
