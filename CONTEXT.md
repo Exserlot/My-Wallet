@@ -84,6 +84,10 @@ _Avoid_: Monthly Budget, Expense List, Cart
 สินค้าหนึ่งรายการใน Shopping List ซึ่งเก็บรายละเอียดและราคาประมาณเพื่อช่วยวางแผน และเปลี่ยนเป็นส่วนหนึ่งของ Expense เมื่อผู้ใช้ยืนยันว่าซื้อแล้ว
 _Avoid_: Expense, Fixed Cost, Budget Allocation
 
+**Attention Item**:
+สถานะทางการเงินที่ยังต้องให้ผู้ใช้ตรวจหรือจัดการ เช่น Fixed Cost ที่ใกล้ครบกำหนดหรือ Budget Allocation ที่ใกล้เต็ม โดยยังคงอยู่แม้ผู้ใช้จะอ่านการแจ้งเตือนแล้วจนกว่าสถานะต้นเหตุจะสิ้นสุด
+_Avoid_: Notification, Transaction, Reminder
+
 **Bank Slip**:
 หลักฐานดิจิทัลจากธนาคารไทยสำหรับการโอนหรือชำระเงิน ซึ่งใช้ช่วยกรอกข้อมูลก่อนที่ผู้ใช้จะตรวจและยืนยันรายการ
 _Avoid_: Paper Receipt, Invoice
