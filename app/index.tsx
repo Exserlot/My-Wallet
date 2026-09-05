@@ -1,33 +1,34 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { formatMoney } from '@/domain/wallets';
+import { useTransactions } from '@/features/transactions/use-transactions';
 import { useWallets } from '@/features/wallets/use-wallets';
 
-const overviewItems = [
-  { label: 'งบเดือนนี้', value: 'ยังไม่ได้กำหนด' },
-  { label: 'รายจ่ายเดือนนี้', value: '฿0.00' },
-  { label: 'เงินคงเหลือ', value: '฿0.00' },
-];
-
-const quickActions = [
-  { label: 'เพิ่มรายรับ' },
-  { label: 'เพิ่มรายจ่าย' },
-  { label: 'นำเข้าสลิป' },
-  { label: 'จัดการกระเป๋า', route: '/wallets' as const },
+const quickActions: { label: string; route?: Href }[] = [
+  { label: 'เพิ่มรายรับ', route: { pathname: '/transactions/new', params: { kind: 'income' } } },
+  { label: 'เพิ่มรายจ่าย', route: { pathname: '/transactions/new', params: { kind: 'expense' } } },
+  { label: 'ดูรายการ', route: '/transactions' },
+  { label: 'จัดการกระเป๋า', route: '/wallets' },
 ];
 
 export default function HomeScreen() {
   const { wallets } = useWallets();
+  const { transactions, totals } = useTransactions(5);
   const totalMinor = wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
+  const monthLabel = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date());
+  const overviewItems = [
+    { label: 'รายรับเดือนนี้', value: formatMoney(totals.incomeMinor) },
+    { label: 'รายจ่ายเดือนนี้', value: formatMoney(totals.expenseMinor) },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.eyebrow}>กันยายน 2569</Text>
+            <Text style={styles.eyebrow}>{monthLabel}</Text>
             <Text style={styles.title}>ภาพรวมการเงิน</Text>
           </View>
           <View style={styles.offlineBadge}>
@@ -63,10 +64,32 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>รายการล่าสุด</Text>
+          <Pressable onPress={() => router.push('/transactions')}>
+            <Text style={styles.sectionLink}>ดูทั้งหมด</Text>
+          </Pressable>
+        </View>
+        {transactions.length === 0 ? <Text style={styles.emptyText}>ยังไม่มี Income หรือ Expense</Text> : null}
+        {transactions.map((transaction) => {
+          const isIncome = transaction.kind === 'income';
+          return (
+            <View key={transaction.id} style={styles.transactionRow}>
+              <View style={styles.transactionInfo}>
+                <Text style={styles.transactionTitle}>{transaction.note || (isIncome ? 'รายรับ' : 'รายจ่าย')}</Text>
+                <Text style={styles.transactionWallet}>{transaction.walletName}</Text>
+              </View>
+              <Text style={[styles.transactionAmount, isIncome ? styles.incomeAmount : styles.expenseAmount]}>
+                {isIncome ? '+' : '−'}{formatMoney(transaction.amount.amountMinor)}
+              </Text>
+            </View>
+          );
+        })}
+
         <View style={styles.noteCard}>
-          <Text style={styles.noteTitle}>ฐานแอปพร้อมแล้ว</Text>
+          <Text style={styles.noteTitle}>ข้อมูลอยู่ในเครื่อง</Text>
           <Text style={styles.noteText}>
-            หน้านี้เป็นโครงชั่วคราวสำหรับเชื่อม Budget, Wallet, Expense และการนำเข้าสลิป ไม่ใช่ดีไซน์สุดท้าย
+            Wallet, Opening Balance, Income และ Expense ทำงานแบบ Offline โดยไม่ส่งข้อมูลการเงินขึ้น cloud
           </Text>
         </View>
       </ScrollView>
@@ -86,12 +109,22 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
   summaryLabel: { color: '#C9D8CE', fontSize: 15 },
   summaryValue: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   sectionTitle: { color: '#17211B', fontSize: 19, fontWeight: '800' },
+  sectionLink: { color: '#176B48', fontWeight: '700' },
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionButton: { width: '48%', minWidth: 150, flexGrow: 1, padding: 16, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 16, backgroundColor: '#FFFEF9' },
   actionPressed: { opacity: 0.7 },
   actionText: { color: '#17211B', fontSize: 16, fontWeight: '700' },
   actionHint: { marginTop: 5, color: '#7A857D', fontSize: 12 },
+  transactionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 14, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 14, backgroundColor: '#FFFEF9' },
+  transactionInfo: { flex: 1 },
+  transactionTitle: { color: '#17211B', fontWeight: '700' },
+  transactionWallet: { marginTop: 3, color: '#66736A', fontSize: 12 },
+  transactionAmount: { fontWeight: '800' },
+  incomeAmount: { color: '#176B48' },
+  expenseAmount: { color: '#A93D38' },
+  emptyText: { padding: 16, color: '#66736A', textAlign: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#B8C1B9', borderRadius: 14 },
   noteCard: { padding: 16, borderLeftWidth: 4, borderLeftColor: '#B86B25', borderRadius: 12, backgroundColor: '#FFF0DC' },
   noteTitle: { color: '#6E3C13', fontWeight: '800' },
   noteText: { marginTop: 5, color: '#704C2D', lineHeight: 21 },

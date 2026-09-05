@@ -35,7 +35,7 @@ const thaiDigits: Record<string, string> = {
   '๙': '9',
 };
 
-export function parseOpeningBalance(value: string): number | null {
+export function parseMoneyInput(value: string): number | null {
   const normalized = value
     .trim()
     .replace(/[๐-๙]/g, (digit) => thaiDigits[digit])
@@ -49,6 +49,8 @@ export function parseOpeningBalance(value: string): number | null {
   return amountMinor;
 }
 
+export const parseOpeningBalance = parseMoneyInput;
+
 export function formatMoney(amountMinor: number): string {
   return new Intl.NumberFormat('th-TH', {
     style: 'currency',
@@ -56,4 +58,3 @@ export function formatMoney(amountMinor: number): string {
     minimumFractionDigits: 2,
   }).format(amountMinor / 100);
 }
-

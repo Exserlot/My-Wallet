@@ -9,7 +9,7 @@ module.exports = defineConfig([
     settings: {
       'import/resolver': {
         node: {
-          extensions: ['.js', '.jsx', '.ts', '.tsx', '.native.ts', '.web.ts'],
+          extensions: ['.js', '.jsx', '.ts', '.tsx', '.native.ts', '.web.ts', '.d.ts'],
         },
       },
     },
