@@ -21,3 +21,16 @@
 - fixture ที่ขึ้นต้น `MW-SLIP` เป็นข้อมูลสังเคราะห์ ไม่ใช่ payload ของธนาคารจริง
 
 รูปสลิปจริงต้องอยู่ใน `private-samples/` เท่านั้นและจะไม่ถูก Git ติดตาม
+
+## Local sample results
+
+ผลวันที่ 5 กันยายน 2026 จากสลิปจริงที่ผู้ใช้ให้ทดสอบเฉพาะในเครื่อง ธนาคารละ 1 รูป โดยไม่อัปโหลดและไม่บันทึก raw QR หรือ transaction reference:
+
+| Bank | QR read | Reference in QR | Date in QR | Amount in QR |
+| --- | --- | --- | --- | --- |
+| KBank | 1/1 | 1/1 | 0/1 | 0/1 |
+| SCB | 1/1 | 1/1 | 1/1 | 0/1 |
+
+QR ทั้งสองใบยังอ่านสำเร็จหลังย่อความกว้างเหลือ 540 px, บีบ JPEG quality 50 และหมุน 90 องศา รวม 8/8 variants เวลา decode ด้วย `jsQR` บนเครื่อง desktop อยู่ระหว่าง 34–162 ms ตัวเลขนี้ไม่ใช่ benchmark ของ Android/Expo
+
+ข้อสรุปชั่วคราว: raw QR เหมาะสำหรับสร้าง fingerprint กันซ้ำ และมี transaction reference ในตัวอย่างทั้งสองธนาคาร แต่ยังไม่ให้ amount ที่มองเห็นบนสลิป จึงต้องคง OCR/manual fallback ยังไม่ควรล็อก bank adapter จากตัวอย่างธนาคารละใบ
