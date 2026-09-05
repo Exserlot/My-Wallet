@@ -1,0 +1,2 @@
+private-samples/*
+!private-samples/README.md
