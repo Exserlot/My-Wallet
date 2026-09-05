@@ -54,6 +54,9 @@
       .json { max-height:270px; overflow:auto; margin:0; padding:14px; border-radius:12px; color:#dcecdf; background:#13231b; font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
       .result { padding:12px; border-left:4px solid var(--blue); border-radius:10px; background:#eaf0f7; }
       .result.error { border-color:var(--red); background:#fae8e5; }
+      .batch-list { display:grid; gap:8px; }
+      .batch-item { display:grid; grid-template-columns:1fr auto; gap:8px 12px; padding:12px; border:1px solid var(--line); border-radius:12px; background:white; }
+      .batch-item small { color:var(--muted); }
       table { width:100%; border-collapse:collapse; font-size:13px; }
       th,td { padding:9px 6px; border-bottom:1px solid var(--line); text-align:left; }
       th { color:var(--muted); font-size:11px; }
@@ -65,9 +68,9 @@
   <body>
     <main>
       <p class="badge info">THROWAWAY LOGIC PROTOTYPE · ISSUE #9</p>
-      <h1>สลิปหนึ่งใบผ่าน pipeline อย่างไร?</h1>
-      <p class="lead">ต้นแบบนี้ตอบว่า QR-first pipeline แยก “อ่าน QR ได้”, “ดึงข้อมูลได้”, “ต้องใช้ fallback” และ “เป็นรายการซ้ำ” ออกจากกันชัดพอหรือไม่ ก่อนเขียนระบบจริง</p>
-      <div class="notice"><b>ประมวลผลในเครื่องเท่านั้น</b><br />หน้านี้ไม่อัปโหลดรูปและไม่เก็บไฟล์ OCR cloud เป็นการจำลองเพื่อทดลอง state เท่านั้น</div>
+      <h1>นำเข้าสลิปหลายใบ แล้วสร้าง Expense</h1>
+      <p class="lead">เลือกรูปสลิปได้หลายรูป ระบบอ่าน QR และจำนวนเงินแยกทีละใบ ตรวจรายการซ้ำ แล้วสร้าง Expense โดยปล่อย Category เป็น “ยังไม่ระบุ” เพื่อกลับมาจัดหมวดภายหลัง</p>
+      <div class="notice"><b>ประมวลผลในเครื่องเท่านั้น</b><br />คำว่า “นำเข้า” หมายถึงเลือกรูปจากมือถือ รูปจะไม่ถูกอัปโหลดขึ้น cloud ใน MVP</div>
 
       <div class="layout">
         <section class="stack">
@@ -85,17 +88,23 @@
           <article class="card">
             <h2>ทดลองอิสระ</h2>
             <div class="buttons">
-              <label class="file-button">เลือกรูปสลิป<input id="slip-file" type="file" accept="image/*" /></label>
+              <label class="file-button">เลือกรูปสลิปหลายรูป<input id="slip-file" type="file" accept="image/*" multiple /></label>
+              <button class="button secondary" data-action="batch">จำลองนำเข้า 3 รูป</button>
               <button class="button secondary" data-action="complete">QR จำลอง: ข้อมูลครบ</button>
               <button class="button secondary" data-action="reference">QR จำลอง: มีแค่ reference</button>
               <button class="button warn" data-action="noQr">จำลอง: อ่าน QR ไม่ได้</button>
-              <button class="button secondary" data-action="ocr">ยินยอม OCR จำลอง</button>
+              <button class="button secondary" data-action="ocr">อ่านยอดด้วย OCR ในเครื่อง</button>
               <button class="button secondary" data-action="manual">กรอกข้อมูลที่ขาดเอง</button>
               <button class="button" data-action="confirm">ยืนยันแบบร่าง</button>
-              <button class="button" data-action="save">บันทึก Transaction</button>
+              <button class="button" data-action="save">สร้าง Expense</button>
               <button class="button danger" data-action="reset">เริ่มใหม่</button>
             </div>
             <p id="browser-support" class="muted" style="margin:12px 0 0"></p>
+          </article>
+
+          <article class="card">
+            <div class="row"><h2>รายการที่นำเข้าครั้งนี้</h2><span id="batch-count" class="badge info">0 รายการ</span></div>
+            <div id="batch-list" class="batch-list"><p class="muted">ยังไม่มีรูปที่เลือก</p></div>
           </article>
 
           <article class="card">
@@ -126,7 +135,7 @@
             <h2>สิ่งที่ต้นแบบยังพิสูจน์ไม่ได้</h2>
             <ul class="muted">
               <li>ความครอบคลุมของธนาคาร จนกว่าจะทดสอบสลิปนิรนามจริง 3–5 แบบต่อธนาคาร</li>
-              <li>ความแม่น OCR ไทย เพราะไม่มีการส่งภาพออกจากเครื่อง</li>
+              <li>ความแม่นของ on-device OCR บนมือถือจริง โดยเฉพาะภาพเบลอหรือสลิปคนละรูปแบบ</li>
               <li>การยืนยันว่าเงินโอนสำเร็จ เพราะต้องใช้ API ที่ได้รับอนุญาตจากธนาคาร</li>
             </ul>
           </article>
@@ -156,7 +165,7 @@
           provenance: {},
           verificationStatus: 'unverified',
           duplicate: { kind: 'none', blocked: false, reason: null },
-          consent: { cloudOcr: false },
+          processing: { localOcrAttempted: false },
           confirmed: false,
           savedFingerprints: [],
           sourceFingerprint: null,
@@ -197,7 +206,7 @@
           return next;
         };
 
-        const requiredMissing = (state) => ['occurredAt', 'amountMinor', 'walletId', 'categoryId'].filter((field) => state.fields[field] === null);
+        const requiredMissing = (state) => ['occurredAt', 'amountMinor', 'walletId'].filter((field) => state.fields[field] === null);
 
         const reduce = (state, action) => {
           let next = structuredClone(state);
@@ -227,11 +236,11 @@
             next.lastChange = action.reason === 'unsupported' ? 'เบราว์เซอร์นี้ไม่มีตัวอ่าน QR จากรูป ต้องทดสอบบน Android/Expo หรือวาง payload' : 'ไม่พบ QR ที่อ่านได้ ต้องเลือก OCR หรือกรอกเอง';
           }
 
-          if (action.type === 'OCR_CONSENTED') {
-            next.consent.cloudOcr = true;
-            next = mergeFields(next, action.fields, 'ocr-cloud-simulated');
+          if (action.type === 'LOCAL_OCR_COMPLETED') {
+            next.processing.localOcrAttempted = true;
+            next = mergeFields(next, action.fields, 'ocr-on-device-simulated');
             next.phase = requiredMissing(next).length ? 'needs_manual' : 'needs_confirmation';
-            next.lastChange = 'จำลองผล OCR หลัง consent แล้ว ข้อมูลจาก OCR ยังต้องให้ผู้ใช้ตรวจ';
+            next.lastChange = 'จำลอง on-device OCR แล้ว ข้อมูลที่อ่านได้ยังต้องให้ผู้ใช้ตรวจ';
           }
 
           if (action.type === 'MANUAL_COMPLETED') {
@@ -264,7 +273,9 @@
               if (next.sourceFingerprint) next.savedFingerprints.push(next.sourceFingerprint);
               next.phase = 'saved';
               next.verificationStatus = 'extracted';
-              next.lastChange = 'บันทึก Transaction แล้วใน memory ด้วยสถานะ extracted ไม่ใช่ bank_verified';
+              next.lastChange = next.fields.categoryId === null
+                ? 'สร้าง Expense แล้ว โดย Category เป็น “ยังไม่ระบุ”'
+                : 'สร้าง Expense แล้ว พร้อม Category ที่ผู้ใช้เลือก';
             }
           }
           return next;
@@ -279,10 +290,11 @@
       };
       const fixtureHashes = { complete: 'sha256:synthetic-complete', reference: 'sha256:synthetic-reference' };
       const ocrFields = { occurredAt:'2026-09-05T09:42:00+07:00', amountMinor:129000, receiverName:'ร้านตัวอย่าง' };
-      const manualFields = { occurredAt:'2026-09-05T09:42:00+07:00', amountMinor:129000, walletId:'wallet-kplus', categoryId:'internet' };
+      const manualFields = { occurredAt:'2026-09-05T09:42:00+07:00', amountMinor:129000, walletId:'wallet-kplus' };
       const phases = ['empty','reading_qr','needs_fallback','needs_manual','needs_confirmation','duplicate_blocked','ready_to_save','saved'];
       let state = SlipPipeline.initialState();
       let activeScenario = 'complete';
+      let batchItems = [];
 
       async function sha256(value) {
         const buffer = value instanceof ArrayBuffer ? value : new TextEncoder().encode(value);
@@ -292,7 +304,7 @@
 
       function dispatch(action) {
         state = SlipPipeline.reduce(state, action);
-        if (action.type !== 'RESET' && ['QR_FOUND','MANUAL_COMPLETED','OCR_CONSENTED'].includes(action.type)) {
+        if (action.type !== 'RESET' && ['QR_FOUND','MANUAL_COMPLETED','LOCAL_OCR_COMPLETED'].includes(action.type)) {
           state = SlipPipeline.reduce(state, { type:'CHECK_DUPLICATE' });
         }
         render();
@@ -304,11 +316,12 @@
         dispatch({ type:'QR_FOUND', raw:fixtures[kind], payloadSha256:fixtureHashes[kind] });
       }
 
-      async function readImage(file) {
+      async function readImage(file, batchIndex = null) {
         const bytes = await file.arrayBuffer();
         dispatch({ type:'IMAGE_SELECTED', image:{ name:file.name, bytes:file.size, sha256:await sha256(bytes) } });
         if (!('BarcodeDetector' in window)) {
           dispatch({ type:'QR_NOT_FOUND', reason:'unsupported' });
+          updateBatchItem(batchIndex, { status:'รออ่านบนมือถือ', tone:'warn', detail:'เบราว์เซอร์นี้ไม่มีตัวอ่าน QR; แอปจริงจะลอง QR และ OCR ในเครื่อง' });
           return;
         }
         try {
@@ -317,17 +330,47 @@
           const bitmap = await createImageBitmap(file);
           const results = await new BarcodeDetector({ formats:['qr_code'] }).detect(bitmap);
           bitmap.close();
-          if (!results.length) dispatch({ type:'QR_NOT_FOUND', reason:'not_found' });
-          else dispatch({ type:'QR_FOUND', raw:results[0].rawValue, payloadSha256:await sha256(results[0].rawValue) });
+          if (!results.length) {
+            dispatch({ type:'QR_NOT_FOUND', reason:'not_found' });
+            updateBatchItem(batchIndex, { status:'ต้องใช้ OCR', tone:'warn', detail:'ไม่พบ QR — แอปจริงจะอ่านจำนวนเงินในเครื่อง' });
+          } else {
+            dispatch({ type:'QR_FOUND', raw:results[0].rawValue, payloadSha256:await sha256(results[0].rawValue) });
+            updateBatchItem(batchIndex, { status:'พบ QR', tone:'good', detail:'พบข้อมูลอ้างอิงแล้ว; รอ OCR จำนวนเงินก่อนสร้าง Expense' });
+          }
         } catch (error) {
           dispatch({ type:'QR_NOT_FOUND', reason:'unsupported' });
+          updateBatchItem(batchIndex, { status:'อ่านไม่ได้', tone:'bad', detail:'ต้องตรวจรูปหรือกรอกจำนวนเงินเอง' });
         }
       }
 
+      function updateBatchItem(index, changes) {
+        if (index === null || !batchItems[index]) return;
+        batchItems[index] = { ...batchItems[index], ...changes };
+        renderBatch();
+      }
+
+      async function readImages(files) {
+        batchItems = files.map((file) => ({ name:file.name, status:'กำลังประมวลผล', tone:'info', detail:'อ่าน QR และเตรียมอ่านยอดด้วย OCR ในเครื่อง' }));
+        renderBatch();
+        for (let index = 0; index < files.length; index += 1) await readImage(files[index], index);
+      }
+
+      function simulateBatch() {
+        batchItems = [
+          { name:'kbank-slip-01.jpg', status:'สร้าง Expense แล้ว', tone:'good', detail:'฿115.00 · Category: ยังไม่ระบุ' },
+          { name:'scb-slip-02.jpg', status:'สร้าง Expense แล้ว', tone:'good', detail:'฿4,000.00 · Category: ยังไม่ระบุ' },
+          { name:'kbank-slip-duplicate.jpg', status:'ไม่สร้างรายการ', tone:'bad', detail:'พบ QR fingerprint ซ้ำกับ Expense เดิม' },
+        ];
+        state = SlipPipeline.initialState();
+        state.lastChange = 'ประมวลผล 3 รูป: สร้าง Expense 2 รายการ และกันรายการซ้ำ 1 รายการ';
+        render();
+      }
+
       const scenarioConfig = {
-        complete: { name:'QR ข้อมูลครบ', detail:'ดูว่า payload ที่ parse ได้ครบยังต้องรอผู้ใช้ยืนยันก่อนบันทึก', steps:[['โหลด QR ครบ',() => useFixture('complete')],['เติม Wallet และหมวด',() => dispatch({type:'MANUAL_COMPLETED',fields:manualFields})],['ยืนยัน',() => dispatch({type:'CONFIRM'})],['บันทึก',() => dispatch({type:'SAVE'})]] },
-        fallback: { name:'QR ไม่ครบ + OCR', detail:'ดูว่า reference จาก QR อยู่ร่วมกับ field จาก OCR และ manual โดยไม่อ้างว่า bank verified', steps:[['โหลด QR มีแค่ reference',() => useFixture('reference')],['ยินยอม OCR จำลอง',() => dispatch({type:'OCR_CONSENTED',fields:ocrFields})],['เลือก Wallet และหมวด',() => dispatch({type:'MANUAL_COMPLETED',fields:manualFields})],['ยืนยันและบันทึก',() => {dispatch({type:'CONFIRM'});dispatch({type:'SAVE'});}]] },
-        manual: { name:'ไม่มี QR', detail:'เมื่ออ่าน QR ไม่ได้ ผู้ใช้ยังสร้าง Transaction ด้วยมือได้โดยไม่ถูกบังคับใช้ cloud', steps:[['จำลองไม่พบ QR',() => {state=SlipPipeline.initialState();dispatch({type:'QR_NOT_FOUND',reason:'not_found'});}],['กรอกเอง',() => dispatch({type:'MANUAL_COMPLETED',fields:manualFields})],['ยืนยันและบันทึก',() => {dispatch({type:'CONFIRM'});dispatch({type:'SAVE'});}]] },
+        complete: { name:'QR ข้อมูลครบ', detail:'แม้ parse ข้อมูลได้ครบ ระบบยังรอผู้ใช้ยืนยันก่อนสร้าง Expense', steps:[['โหลด QR ครบ',() => useFixture('complete')],['เลือก Wallet',() => dispatch({type:'MANUAL_COMPLETED',fields:manualFields})],['ยืนยัน',() => dispatch({type:'CONFIRM'})],['สร้าง Expense',() => dispatch({type:'SAVE'})]] },
+        fallback: { name:'QR ไม่ครบ + OCR', detail:'reference มาจาก QR ส่วนจำนวนเงินมาจาก OCR ในเครื่อง จากนั้นสร้าง Expense โดยยังไม่ต้องเลือก Category', steps:[['โหลด QR มีแค่ reference',() => useFixture('reference')],['อ่านยอดด้วย OCR ในเครื่อง',() => dispatch({type:'LOCAL_OCR_COMPLETED',fields:ocrFields})],['เลือก Wallet',() => dispatch({type:'MANUAL_COMPLETED',fields:manualFields})],['ยืนยันและสร้าง Expense',() => {dispatch({type:'CONFIRM'});dispatch({type:'SAVE'});}]] },
+        manual: { name:'ไม่มี QR', detail:'เมื่ออ่าน QR และ OCR ไม่สำเร็จ ผู้ใช้กรอกเฉพาะข้อมูลที่ขาด แล้วสร้าง Expense แบบ Category ยังไม่ระบุได้', steps:[['จำลองไม่พบ QR',() => {state=SlipPipeline.initialState();dispatch({type:'QR_NOT_FOUND',reason:'not_found'});}],['กรอกข้อมูลที่ขาด',() => dispatch({type:'MANUAL_COMPLETED',fields:manualFields})],['ยืนยันและสร้าง Expense',() => {dispatch({type:'CONFIRM'});dispatch({type:'SAVE'});}]] },
+        batch: { name:'หลายรูปพร้อมกัน', detail:'แต่ละรูปมีผลของตัวเอง รายการที่สำเร็จไม่ต้องรอรูปที่อ่านไม่ได้หรือรูปซ้ำ', steps:[['เลือก 3 รูปจำลอง',() => simulateBatch()],['ตรวจผลรายรูป',() => { state.lastChange='ผู้ใช้เปิดดูและแก้จำนวนเงินของแต่ละรายการได้ก่อนหรือหลังสร้าง Expense'; render(); }]] },
         duplicate: { name:'สลิปซ้ำ', detail:'บันทึก fingerprint ครั้งแรก แล้วอ่าน payload เดิมอีกครั้งเพื่อดู hard duplicate ถูกบล็อก', steps:[['บันทึกครั้งแรก',async() => {await useFixture('complete');dispatch({type:'MANUAL_COMPLETED',fields:manualFields});dispatch({type:'CONFIRM'});dispatch({type:'SAVE'});}],['อ่าน QR เดิมอีกครั้ง',() => {const saved=[...state.savedFingerprints];state=SlipPipeline.initialState();state.savedFingerprints=saved;dispatch({type:'QR_FOUND',raw:fixtures.complete,payloadSha256:fixtureHashes.complete});}],['ลองยืนยัน',() => dispatch({type:'CONFIRM'})]] },
       };
 
@@ -361,7 +404,15 @@
 
         document.querySelector('#duplicate').innerHTML = state.duplicate.kind==='hard' ? '<p class="badge bad">Hard duplicate · บล็อก</p><p>พบ fingerprint ของ QR เดิมในรายการที่บันทึกแล้ว ต้องไม่สร้าง Transaction ซ้ำ</p>' : `<p class="badge good">ยังไม่พบ hard duplicate</p><p class="muted">Fingerprint ที่บันทึกใน memory: ${state.savedFingerprints.length}</p>`;
         document.querySelector('#json').textContent = JSON.stringify(state,null,2);
+        renderBatch();
         renderScenario();
+      }
+
+      function renderBatch() {
+        document.querySelector('#batch-count').textContent = `${batchItems.length} รายการ`;
+        document.querySelector('#batch-list').innerHTML = batchItems.length
+          ? batchItems.map((item) => `<div class="batch-item"><div><b>${item.name}</b><br /><small>${item.detail}</small></div><span class="badge ${item.tone}">${item.status}</span></div>`).join('')
+          : '<p class="muted">ยังไม่มีรูปที่เลือก</p>';
       }
 
       function renderScenario() {
@@ -373,13 +424,14 @@
       }
 
       document.querySelector('#browser-support').textContent = 'BarcodeDetector' in window ? 'เบราว์เซอร์นี้มี BarcodeDetector: ทดลองอ่าน QR จากรูปได้ในเครื่อง' : 'เบราว์เซอร์นี้ไม่มี BarcodeDetector: ใช้กรณีจำลองได้ แต่ต้องทดสอบการอ่านรูปซ้ำบน Android/Expo';
-      document.querySelector('#slip-file').addEventListener('change',(event) => { const file=event.target.files[0]; if(file) readImage(file); });
+      document.querySelector('#slip-file').addEventListener('change',(event) => { const files=[...event.target.files]; if(files.length) readImages(files); });
       document.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click',() => {
         const action=button.dataset.action;
+        if(action==='batch') simulateBatch();
         if(action==='complete') useFixture('complete');
         if(action==='reference') useFixture('reference');
         if(action==='noQr') { state=SlipPipeline.initialState(); dispatch({type:'QR_NOT_FOUND',reason:'not_found'}); }
-        if(action==='ocr') dispatch({type:'OCR_CONSENTED',fields:ocrFields});
+        if(action==='ocr') dispatch({type:'LOCAL_OCR_COMPLETED',fields:ocrFields});
         if(action==='manual') dispatch({type:'MANUAL_COMPLETED',fields:manualFields});
         if(action==='confirm') dispatch({type:'CONFIRM'});
         if(action==='save') dispatch({type:'SAVE'});
