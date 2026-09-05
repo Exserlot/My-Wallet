@@ -37,7 +37,7 @@ _Avoid_: Withdrawal, Payment, เงินออก
 _Avoid_: Income, Expense
 
 **Expense Category**:
-กลุ่มวัตถุประสงค์ของ Expense เช่น อาหาร เดินทาง หรือที่อยู่อาศัย
+กลุ่มวัตถุประสงค์ของ Expense เช่น อาหาร เดินทาง หรือที่อยู่อาศัย โดย Expense อาจยังไม่ระบุหมวดได้ ส่วน Income ห้ามใช้ Expense Category หมวดที่ Archive แล้วไม่ใช้กับรายการใหม่แต่ยังแสดงชื่อในประวัติเดิม
 _Avoid_: Wallet Category, Budget
 
 **Monthly Budget**:

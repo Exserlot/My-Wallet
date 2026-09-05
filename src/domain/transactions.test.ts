@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { currentMonthRange, isValidCashFlowAmount, signedAmountMinor } from './transactions';
+import { categoryIdForCashFlow, currentMonthRange, isValidCashFlowAmount, signedAmountMinor } from './transactions';
 
 describe('signedAmountMinor', () => {
   it('adds income and opening balance', () => {
@@ -29,5 +29,12 @@ describe('isValidCashFlowAmount', () => {
     expect(isValidCashFlowAmount(0)).toBe(false);
     expect(isValidCashFlowAmount(-1)).toBe(false);
     expect(isValidCashFlowAmount(1.5)).toBe(false);
+  });
+});
+
+describe('categoryIdForCashFlow', () => {
+  it('keeps categories for expenses and clears them for income', () => {
+    expect(categoryIdForCashFlow('expense', 'food')).toBe('food');
+    expect(categoryIdForCashFlow('income', 'food')).toBeNull();
   });
 });

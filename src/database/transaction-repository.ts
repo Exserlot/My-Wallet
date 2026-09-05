@@ -11,7 +11,8 @@ export type CreateTransactionInput = Readonly<{
 
 export interface TransactionRepository {
   createTransaction(input: CreateTransactionInput): Promise<Transaction>;
-  listRecent(limit?: number): Promise<Transaction[]>;
+  getTransaction(id: string): Promise<Transaction | null>;
+  listRecent(limit?: number, options?: { uncategorizedOnly?: boolean }): Promise<Transaction[]>;
+  updateExpenseCategory(id: string, categoryId: string | null): Promise<Transaction>;
   getTotals(start: string, end: string): Promise<CashFlowTotals>;
 }
-

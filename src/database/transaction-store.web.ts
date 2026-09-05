@@ -1,6 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 
-import { isValidCashFlowAmount, type Transaction } from '@/domain/transactions';
+import { categoryIdForCashFlow, isValidCashFlowAmount, type Transaction } from '@/domain/transactions';
 
 import type { CreateTransactionInput, TransactionRepository } from './transaction-repository';
 import { readWebDatabase, writeWebDatabase, type WebTransaction } from './web-database';
@@ -15,6 +15,7 @@ function toTransaction(transaction: WebTransaction): Transaction {
     walletName: wallet.name,
     kind: transaction.kind,
     categoryId: transaction.categoryId,
+    categoryName: database.expenseCategories.find((category) => category.id === transaction.categoryId)?.name ?? null,
     amount: { amountMinor: transaction.amountMinor, currency: 'THB' },
     occurredAt: transaction.occurredAt,
     note: transaction.note,
@@ -29,6 +30,10 @@ export const transactionRepository: TransactionRepository = {
     if (!database.wallets.some((wallet) => wallet.id === input.walletId)) {
       throw new Error('Wallet not found');
     }
+    const categoryId = categoryIdForCashFlow(input.kind, input.categoryId);
+    if (categoryId && !database.expenseCategories.some((category) => category.id === categoryId && category.archivedAt === null)) {
+      throw new Error('Expense category not found');
+    }
     const transaction: WebTransaction = {
       id: randomUUID(),
       walletId: input.walletId,
@@ -36,7 +41,7 @@ export const transactionRepository: TransactionRepository = {
       amountMinor: input.amountMinor,
       occurredAt: input.occurredAt,
       createdAt: new Date().toISOString(),
-      categoryId: input.categoryId,
+      categoryId,
       note: input.note?.trim() || null,
       source: 'manual',
     };
@@ -44,13 +49,34 @@ export const transactionRepository: TransactionRepository = {
     return toTransaction(transaction);
   },
 
-  async listRecent(limit = 20) {
+  async getTransaction(id) {
+    const transaction = readWebDatabase().transactions.find((item) => item.id === id);
+    return transaction ? toTransaction(transaction) : null;
+  },
+
+  async listRecent(limit = 20, options) {
     const database = readWebDatabase();
     return database.transactions
       .filter((transaction) => transaction.kind === 'income' || transaction.kind === 'expense')
+      .filter((transaction) => !options?.uncategorizedOnly || (transaction.kind === 'expense' && transaction.categoryId === null))
       .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt) || right.createdAt.localeCompare(left.createdAt))
       .slice(0, Math.max(1, Math.min(limit, 100)))
       .map(toTransaction);
+  },
+
+  async updateExpenseCategory(id, categoryId) {
+    const database = readWebDatabase();
+    if (categoryId && !database.expenseCategories.some((category) => category.id === categoryId && category.archivedAt === null)) {
+      throw new Error('Expense category not found');
+    }
+    const target = database.transactions.find((transaction) => transaction.id === id);
+    if (!target || target.kind !== 'expense') throw new Error('Expense transaction not found');
+    const updated = { ...target, categoryId };
+    writeWebDatabase({
+      ...database,
+      transactions: database.transactions.map((transaction) => transaction.id === id ? updated : transaction),
+    });
+    return toTransaction(updated);
   },
 
   async getTotals(start: string, end: string) {

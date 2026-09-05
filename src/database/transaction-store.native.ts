@@ -1,6 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 
-import { isValidCashFlowAmount, type CashFlowKind, type Transaction, type TransactionKind } from '@/domain/transactions';
+import { categoryIdForCashFlow, isValidCashFlowAmount, type CashFlowKind, type Transaction, type TransactionKind } from '@/domain/transactions';
 
 import { getDatabase } from './database';
 import type { CreateTransactionInput, TransactionRepository } from './transaction-repository';
@@ -14,6 +14,7 @@ type TransactionRow = {
   currency: 'THB';
   occurred_at: string;
   category_id: string | null;
+  category_name: string | null;
   note: string | null;
   source: 'manual' | 'bank-slip';
 };
@@ -36,6 +37,7 @@ function toTransaction(row: TransactionRow): Transaction {
     walletName: row.wallet_name,
     kind: domainKind[row.kind],
     categoryId: row.category_id,
+    categoryName: row.category_name,
     amount: { amountMinor: row.amount_minor, currency: row.currency },
     occurredAt: row.occurred_at,
     note: row.note,
@@ -43,7 +45,7 @@ function toTransaction(row: TransactionRow): Transaction {
   };
 }
 
-async function getTransaction(id: string) {
+async function findTransaction(id: string) {
   const database = await getDatabase();
   const row = await database.getFirstAsync<TransactionRow>(
     `SELECT
@@ -55,21 +57,30 @@ async function getTransaction(id: string) {
       transactions.currency,
       transactions.occurred_at,
       transactions.category_id,
+      expense_categories.name AS category_name,
       transactions.note,
       transactions.source
     FROM transactions
     JOIN wallets ON wallets.id = transactions.wallet_id
+    LEFT JOIN expense_categories ON expense_categories.id = transactions.category_id
     WHERE transactions.id = ?`,
     id,
   );
-  if (!row) throw new Error('Transaction was not found after insert');
-  return toTransaction(row);
+  return row ? toTransaction(row) : null;
 }
 
 export const transactionRepository: TransactionRepository = {
   async createTransaction(input: CreateTransactionInput) {
     if (!isValidCashFlowAmount(input.amountMinor)) throw new Error('Amount must be positive minor units');
     const database = await getDatabase();
+    const categoryId = categoryIdForCashFlow(input.kind, input.categoryId);
+    if (categoryId) {
+      const category = await database.getFirstAsync<{ id: string }>(
+        'SELECT id FROM expense_categories WHERE id = ? AND archived_at IS NULL',
+        categoryId,
+      );
+      if (!category) throw new Error('Expense category not found');
+    }
     const id = randomUUID();
     await database.runAsync(
       `INSERT INTO transactions
@@ -82,14 +93,18 @@ export const transactionRepository: TransactionRepository = {
       'THB',
       input.occurredAt,
       new Date().toISOString(),
-      input.categoryId,
+      categoryId,
       input.note?.trim() || null,
       'manual',
     );
-    return getTransaction(id);
+    const created = await findTransaction(id);
+    if (!created) throw new Error('Transaction was not found after insert');
+    return created;
   },
 
-  async listRecent(limit = 20) {
+  getTransaction: findTransaction,
+
+  async listRecent(limit = 20, options) {
     const database = await getDatabase();
     const rows = await database.getAllAsync<TransactionRow>(
       `SELECT
@@ -101,16 +116,39 @@ export const transactionRepository: TransactionRepository = {
         transactions.currency,
         transactions.occurred_at,
         transactions.category_id,
+        expense_categories.name AS category_name,
         transactions.note,
         transactions.source
       FROM transactions
       JOIN wallets ON wallets.id = transactions.wallet_id
+      LEFT JOIN expense_categories ON expense_categories.id = transactions.category_id
       WHERE transactions.kind IN ('INCOME', 'EXPENSE')
+        ${options?.uncategorizedOnly ? "AND transactions.kind = 'EXPENSE' AND transactions.category_id IS NULL" : ''}
       ORDER BY transactions.occurred_at DESC, transactions.created_at DESC
       LIMIT ?`,
       Math.max(1, Math.min(limit, 100)),
     );
     return rows.map(toTransaction);
+  },
+
+  async updateExpenseCategory(id, categoryId) {
+    const database = await getDatabase();
+    if (categoryId) {
+      const category = await database.getFirstAsync<{ id: string }>(
+        'SELECT id FROM expense_categories WHERE id = ? AND archived_at IS NULL',
+        categoryId,
+      );
+      if (!category) throw new Error('Expense category not found');
+    }
+    const result = await database.runAsync(
+      "UPDATE transactions SET category_id = ? WHERE id = ? AND kind = 'EXPENSE'",
+      categoryId,
+      id,
+    );
+    if (result.changes !== 1) throw new Error('Expense transaction not found');
+    const updated = await findTransaction(id);
+    if (!updated) throw new Error('Transaction was not found after update');
+    return updated;
   },
 
   async getTotals(start: string, end: string) {

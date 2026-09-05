@@ -39,6 +39,19 @@ async function migrate(database: SQLiteDatabase) {
       CREATE INDEX IF NOT EXISTS transactions_occurred_at_idx ON transactions(occurred_at DESC);
       PRAGMA user_version = 2;
     `);
+    currentVersion = 2;
+  }
+
+  if (currentVersion === 2) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS expense_categories (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        created_at TEXT NOT NULL,
+        archived_at TEXT
+      );
+      PRAGMA user_version = 3;
+    `);
   }
 }
 
@@ -51,4 +64,3 @@ export async function getDatabase() {
   }
   return databasePromise;
 }
-

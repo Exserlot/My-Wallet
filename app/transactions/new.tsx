@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { transactionRepository } from '@/database/transaction-store';
 import type { CashFlowKind } from '@/domain/transactions';
 import { parseMoneyInput } from '@/domain/wallets';
+import { useExpenseCategories } from '@/features/expense-categories/use-expense-categories';
 import { useWallets } from '@/features/wallets/use-wallets';
 
 export default function NewTransactionScreen() {
@@ -15,9 +16,11 @@ export default function NewTransactionScreen() {
   const [amount, setAmount] = useState('');
   const [walletId, setWalletId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { wallets, loading } = useWallets();
+  const { categories, loading: categoriesLoading } = useExpenseCategories();
 
   const selectedWalletId = useMemo(() => {
     if (walletId && wallets.some((wallet) => wallet.id === walletId)) return walletId;
@@ -42,7 +45,7 @@ export default function NewTransactionScreen() {
         walletId: selectedWalletId,
         kind,
         amountMinor,
-        categoryId: null,
+        categoryId: kind === 'expense' ? categoryId : null,
         note: note || null,
         occurredAt: new Date().toISOString(),
       });
@@ -96,9 +99,24 @@ export default function NewTransactionScreen() {
           </View>
 
           {kind === 'expense' ? (
-            <View style={styles.categoryNotice}>
-              <Text style={styles.categoryTitle}>หมวด: ยังไม่ระบุ</Text>
-              <Text style={styles.categoryText}>สามารถกลับมาจัดหมวดภายหลังได้ เมื่อระบบจัดการหมวดพร้อมใช้งาน</Text>
+            <View style={styles.fieldGroup}>
+              <View style={styles.categoryHeader}>
+                <Text style={styles.label}>หมวดรายจ่าย</Text>
+                <Pressable accessibilityRole="button" onPress={() => router.push('/categories')}>
+                  <Text style={styles.categoryLink}>จัดการหมวด</Text>
+                </Pressable>
+              </View>
+              {categoriesLoading ? <Text style={styles.hint}>กำลังโหลด…</Text> : null}
+              <View style={styles.walletOptions}>
+                <Pressable accessibilityRole="radio" accessibilityState={{ checked: categoryId === null }} onPress={() => setCategoryId(null)} style={[styles.walletButton, categoryId === null && styles.categoryActive]}>
+                  <Text style={[styles.walletText, categoryId === null && styles.categoryTextActive]}>ยังไม่ระบุ</Text>
+                </Pressable>
+                {categories.map((category) => (
+                  <Pressable accessibilityRole="radio" accessibilityState={{ checked: categoryId === category.id }} key={category.id} onPress={() => setCategoryId(category.id)} style={[styles.walletButton, categoryId === category.id && styles.categoryActive]}>
+                    <Text style={[styles.walletText, categoryId === category.id && styles.categoryTextActive]}>{category.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
           ) : null}
 
@@ -137,9 +155,10 @@ const styles = StyleSheet.create({
   walletActive: { borderColor: '#176B48', backgroundColor: '#DCEDDF' },
   walletText: { color: '#66736A', fontWeight: '600' },
   walletTextActive: { color: '#176B48' },
-  categoryNotice: { padding: 14, borderRadius: 13, backgroundColor: '#FFF0DC' },
-  categoryTitle: { color: '#7E4517', fontWeight: '800' },
-  categoryText: { marginTop: 4, color: '#80562F', fontSize: 12, lineHeight: 17 },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  categoryLink: { color: '#176B48', fontSize: 13, fontWeight: '700' },
+  categoryActive: { borderColor: '#B86B25', backgroundColor: '#FFF0DC' },
+  categoryTextActive: { color: '#7E4517' },
   emptyWallet: { padding: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#176B48', borderRadius: 13 },
   emptyWalletText: { color: '#176B48', textAlign: 'center', fontWeight: '700' },
   hint: { color: '#66736A' },

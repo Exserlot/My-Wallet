@@ -17,6 +17,7 @@ export type Transaction = Readonly<{
   walletName: string;
   kind: TransactionKind;
   categoryId: string | null;
+  categoryName: string | null;
   amount: Money;
   occurredAt: string;
   note: string | null;
@@ -34,6 +35,10 @@ export function signedAmountMinor(kind: TransactionKind, amountMinor: number): n
 
 export function isValidCashFlowAmount(amountMinor: number): boolean {
   return Number.isSafeInteger(amountMinor) && amountMinor > 0;
+}
+
+export function categoryIdForCashFlow(kind: CashFlowKind, categoryId: string | null): string | null {
+  return kind === 'expense' ? categoryId : null;
 }
 
 export function currentMonthRange(now = new Date()): { start: string; end: string } {

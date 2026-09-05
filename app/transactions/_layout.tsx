@@ -11,7 +11,7 @@ export default function TransactionLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'รายการ' }} />
       <Stack.Screen name="new" options={{ title: 'เพิ่มรายการ' }} />
+      <Stack.Screen name="[id]" options={{ title: 'จัดหมวดรายจ่าย' }} />
     </Stack>
   );
 }
-

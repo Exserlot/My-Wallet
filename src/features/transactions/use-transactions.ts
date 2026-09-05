@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { transactionRepository } from '@/database/transaction-store';
 import { currentMonthRange, type CashFlowTotals, type Transaction } from '@/domain/transactions';
 
-export function useTransactions(limit = 20) {
+export function useTransactions(limit = 20, uncategorizedOnly = false) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totals, setTotals] = useState<CashFlowTotals>({ incomeMinor: 0, expenseMinor: 0 });
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ export function useTransactions(limit = 20) {
       setError(null);
       const range = currentMonthRange();
       const [recent, currentTotals] = await Promise.all([
-        transactionRepository.listRecent(limit),
+        transactionRepository.listRecent(limit, { uncategorizedOnly }),
         transactionRepository.getTotals(range.start, range.end),
       ]);
       setTransactions(recent);
@@ -25,7 +25,7 @@ export function useTransactions(limit = 20) {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, uncategorizedOnly]);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,4 +35,3 @@ export function useTransactions(limit = 20) {
 
   return { transactions, totals, loading, error, refresh };
 }
-
