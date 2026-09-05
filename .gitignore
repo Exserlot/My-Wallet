@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Expo generated files
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+/android/
+/ios/
+
+# Local tooling and temporary scaffolds
+.scaffold-expo-*/
+.worktrees/
+*.tsbuildinfo
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Logs and operating-system files
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+
