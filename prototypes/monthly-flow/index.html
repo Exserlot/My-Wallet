@@ -115,6 +115,18 @@
       .sheet-footer { display: grid; grid-template-columns: .8fr 1.2fr; gap: 10px; margin-top: 20px; }
       .slip-preview { display: grid; place-items: center; min-height: 150px; margin: 14px 0; border: 2px dashed #cad1c8; border-radius: 18px; background: #f2f5f0; color: var(--muted); text-align: center; }
       .notice { padding: 10px 12px; border-radius: 12px; background: #fff0db; color: #7d481b; font-size: 12px; }
+      .plan-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 18px; padding: 5px; border-radius: 14px; background: #e7eae3; }
+      .plan-tabs button { min-height: 40px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; font-size: 12px; }
+      .plan-tabs button.active { color: var(--green); background: var(--card); box-shadow: 0 2px 8px rgba(23,33,27,.08); font-weight: 800; }
+      .shop-summary { margin-top: 18px; padding: 20px; color: white; border: 0; background: #22382d; }
+      .shop-summary .estimate { margin: 4px 0 14px; font-size: 32px; font-weight: 800; }
+      .shop-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 14px; background: var(--card); }
+      .shop-item input { width: 21px; height: 21px; accent-color: var(--green); }
+      .shop-item label { cursor: pointer; }
+      .shop-item p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+      .priority { color: var(--orange); font-weight: 750; }
+      .purchase-bar { position: fixed; z-index: 6; left: 50%; bottom: 112px; width: min(calc(100% - 36px), 394px); transform: translateX(-50%); display: grid; grid-template-columns: 46px 1fr; gap: 8px; padding: 6px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 254, 249, .96); box-shadow: 0 10px 24px rgba(23,33,27,.15); backdrop-filter: blur(10px); }
+      .purchase-bar .secondary { padding: 0; font-size: 22px; }
       [hidden] { display: none !important; }
 
       @media (min-width: 700px) {
@@ -129,7 +141,7 @@
     <nav class="bottom-nav" aria-label="เมนูหลัก">
       <button data-nav="overview">ภาพรวม</button>
       <button data-nav="transactions">รายการ</button>
-      <button data-nav="budget">งบเดือน</button>
+      <button data-nav="planning">วางแผน</button>
       <button data-nav="wallets">กระเป๋า</button>
     </nav>
 
@@ -165,6 +177,19 @@
       </section>
     </div>
 
+    <div id="shopping-sheet" class="sheet-backdrop" role="dialog" aria-modal="true" aria-labelledby="shopping-title">
+      <section class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="row"><div><p class="eyebrow">วางแผนก่อนจ่าย</p><h2 id="shopping-title">เพิ่มของที่ต้องซื้อ</h2></div><button class="secondary" data-close>ปิด</button></div>
+        <div class="field"><label>ชื่อสินค้า</label><input placeholder="เช่น ข้าวสาร" /></div>
+        <div class="field"><label>จำนวน</label><input inputmode="numeric" value="1" /></div>
+        <div class="field"><label>ราคาประมาณ</label><input inputmode="decimal" placeholder="0.00" /></div>
+        <div class="field"><label>หมวดค่าใช้จ่าย</label><input placeholder="ไม่ระบุก็ได้" /></div>
+        <div class="field"><label>ร้านค้า / สถานที่</label><input placeholder="ไม่ระบุก็ได้" /></div>
+        <div class="sheet-footer"><button class="secondary" data-close>ยกเลิก</button><button class="primary" data-add-shopping>เพิ่มในรายการ</button></div>
+      </section>
+    </div>
+
     <script>
       // Three structurally different home-screen variants, switchable via ?variant=.
       const variants = ['A', 'B', 'C'];
@@ -174,6 +199,7 @@
         C: 'C · จัดการวันนี้',
       };
       const app = document.querySelector('#app');
+      let activeScreen = 'home';
 
       function currentVariant() {
         const value = new URLSearchParams(location.search).get('variant')?.toUpperCase();
@@ -184,6 +210,7 @@
         const url = new URL(location.href);
         url.searchParams.set('variant', value);
         history.replaceState({}, '', url);
+        activeScreen = 'home';
         render();
       }
 
@@ -223,12 +250,28 @@
           <section class="section"><div class="row"><h2>ลำดับเงินเดือนนี้</h2><button class="secondary" data-entry>＋ บันทึก</button></div><ol class="timeline"><li><h3>วันนี้ · ใช้ไป ฿85</h3><p class="muted">อาหารกลางวัน · เงินสด</p></li><li><h3>พรุ่งนี้ · ต้องจ่าย ฿1,290</h3><p class="muted">ค่าอินเทอร์เน็ต · K PLUS</p></li><li><h3>9 ก.ย. · ต้องจ่าย ฿1,800</h3><p class="muted">ค่าเช่า · K PLUS</p></li><li><h3>สิ้นรอบ · คาดว่าเหลือ ฿3,670</h3><p class="muted">หากไม่มีรายจ่ายเพิ่ม</p></li></ol></section>`;
       }
 
+      function shoppingScreen() {
+        return `
+          <header class="row"><div><p class="eyebrow">รอบ 1–30 กันยายน</p><h1>วางแผนการเงิน</h1></div><button class="icon-button" data-shopping-add aria-label="เพิ่มของที่ต้องซื้อ">＋</button></header>
+          <nav class="plan-tabs" aria-label="ประเภทแผน"><button>งบเดือน</button><button>Fixed Cost</button><button class="active" aria-current="page">ของที่ต้องซื้อ</button></nav>
+          <section class="card shop-summary"><p class="eyebrow" style="color:#c4d5cb">ราคาประมาณทั้งหมด · 5 รายการ</p><div class="estimate money">฿2,430</div><div class="row"><span>งบคงเหลือตอนนี้</span><b class="money">฿6,760</b></div><div class="row" style="margin-top:5px;color:#f4c783"><span>ถ้าซื้อทั้งหมดจะเหลือ</span><b class="money">฿4,330</b></div></section>
+          <section class="section"><div class="row"><h2>รายการที่ต้องซื้อ</h2><span class="chip">เรียงตามความสำคัญ</span></div><div class="list" id="shopping-list">
+            <div class="shop-item"><input id="shop-rice" type="checkbox" data-shop-price="180" checked /><label for="shop-rice"><h3>ข้าวสาร 5 กก.</h3><p><span class="priority">สำคัญ</span> · อาหาร · ตลาด</p></label><b class="money">~฿180</b></div>
+            <div class="shop-item"><input id="shop-detergent" type="checkbox" data-shop-price="169" checked /><label for="shop-detergent"><h3>น้ำยาซักผ้า</h3><p><span class="priority">สำคัญ</span> · ของใช้ในบ้าน</p></label><b class="money">~฿169</b></div>
+            <div class="shop-item"><input id="shop-shoes" type="checkbox" data-shop-price="1790" /><label for="shop-shoes"><h3>รองเท้าวิ่ง</h3><p>รอได้ · สุขภาพ · ห้าง</p></label><b class="money">~฿1,790</b></div>
+            <div class="shop-item"><input id="shop-coffee" type="checkbox" data-shop-price="180" /><label for="shop-coffee"><h3>กาแฟ</h3><p>ทั่วไป · อาหาร</p></label><b class="money">~฿180</b></div>
+            <div class="shop-item"><input id="shop-bulb" type="checkbox" data-shop-price="111" /><label for="shop-bulb"><h3>หลอดไฟ</h3><p>ทั่วไป · ของใช้ในบ้าน</p></label><b class="money">~฿111</b></div>
+          </div></section>
+          <div class="purchase-bar"><button class="secondary" data-shopping-add aria-label="เพิ่มสินค้า">＋</button><button class="primary" id="purchase-selected" data-purchase>ซื้อ 2 รายการ · ประมาณ ฿349</button></div>`;
+      }
+
       function render() {
         const value = currentVariant();
-        app.innerHTML = value === 'A' ? variantA() : value === 'B' ? variantB() : variantC();
+        app.innerHTML = activeScreen === 'planning' ? shoppingScreen() : value === 'A' ? variantA() : value === 'B' ? variantB() : variantC();
         document.querySelector('#variant-label').textContent = names[value];
         document.querySelectorAll('[data-nav]').forEach((button) => {
-          const active = button.dataset.nav === (value === 'B' ? 'transactions' : 'overview');
+          const activeNav = activeScreen === 'planning' ? 'planning' : value === 'B' ? 'transactions' : 'overview';
+          const active = button.dataset.nav === activeNav;
           button.classList.toggle('active', active);
           if (active) button.setAttribute('aria-current', 'page');
           else button.removeAttribute('aria-current');
@@ -244,14 +287,37 @@
       function wireActions() {
         document.querySelectorAll('[data-entry]').forEach((button) => button.addEventListener('click', () => openSheet('#entry-sheet')));
         document.querySelectorAll('[data-slip]').forEach((button) => button.addEventListener('click', () => openSheet('#slip-sheet')));
+        document.querySelectorAll('[data-shopping-add]').forEach((button) => button.addEventListener('click', () => openSheet('#shopping-sheet')));
+        document.querySelectorAll('[data-shop-price]').forEach((checkbox) => checkbox.addEventListener('change', updateShoppingSelection));
+        document.querySelectorAll('[data-purchase]').forEach((button) => button.addEventListener('click', () => {
+          const selected = document.querySelectorAll('[data-shop-price]:checked');
+          if (!selected.length) return;
+          document.querySelector('#entry-title').textContent = `บันทึกการซื้อ ${selected.length} รายการ`;
+          document.querySelector('#entry-sheet input').value = [...selected].reduce((sum, item) => sum + Number(item.dataset.shopPrice), 0).toFixed(2);
+          openSheet('#entry-sheet');
+        }));
         document.querySelectorAll('.type-tabs button').forEach((button) => button.addEventListener('click', () => {
           button.parentElement.querySelectorAll('button').forEach((item) => item.classList.remove('active'));
           button.classList.add('active');
         }));
       }
 
+      function updateShoppingSelection() {
+        const selected = [...document.querySelectorAll('[data-shop-price]:checked')];
+        const total = selected.reduce((sum, item) => sum + Number(item.dataset.shopPrice), 0);
+        const button = document.querySelector('#purchase-selected');
+        button.textContent = selected.length ? `ซื้อ ${selected.length} รายการ · ประมาณ ฿${total.toLocaleString('th-TH')}` : 'เลือกสินค้าที่ซื้อ';
+        button.disabled = selected.length === 0;
+      }
+
       document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click', () => button.closest('.sheet-backdrop').classList.remove('open')));
       document.querySelectorAll('[data-save]').forEach((button) => button.addEventListener('click', () => { button.textContent = 'บันทึกแล้ว ✓'; setTimeout(() => button.closest('.sheet-backdrop').classList.remove('open'), 550); }));
+      document.querySelectorAll('[data-add-shopping]').forEach((button) => button.addEventListener('click', () => { button.textContent = 'เพิ่มแล้ว ✓'; setTimeout(() => button.closest('.sheet-backdrop').classList.remove('open'), 550); }));
+      document.querySelectorAll('[data-nav]').forEach((button) => button.addEventListener('click', () => {
+        if (button.dataset.nav === 'planning') activeScreen = 'planning';
+        if (button.dataset.nav === 'overview') activeScreen = 'home';
+        render();
+      }));
       document.querySelector('#previous').addEventListener('click', () => { const index = variants.indexOf(currentVariant()); setVariant(variants[(index + variants.length - 1) % variants.length]); });
       document.querySelector('#next').addEventListener('click', () => { const index = variants.indexOf(currentVariant()); setVariant(variants[(index + 1) % variants.length]); });
       document.addEventListener('keydown', (event) => {
