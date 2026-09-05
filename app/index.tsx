@@ -1,5 +1,9 @@
+import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { formatMoney } from '@/domain/wallets';
+import { useWallets } from '@/features/wallets/use-wallets';
 
 const overviewItems = [
   { label: 'งบเดือนนี้', value: 'ยังไม่ได้กำหนด' },
@@ -7,9 +11,17 @@ const overviewItems = [
   { label: 'เงินคงเหลือ', value: '฿0.00' },
 ];
 
-const quickActions = ['เพิ่มรายรับ', 'เพิ่มรายจ่าย', 'นำเข้าสลิป', 'จัดการกระเป๋า'];
+const quickActions = [
+  { label: 'เพิ่มรายรับ' },
+  { label: 'เพิ่มรายจ่าย' },
+  { label: 'นำเข้าสลิป' },
+  { label: 'จัดการกระเป๋า', route: '/wallets' as const },
+];
 
 export default function HomeScreen() {
+  const { wallets } = useWallets();
+  const totalMinor = wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -24,6 +36,10 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>ยอดรวมทุกกระเป๋า</Text>
+            <Text style={styles.summaryValue}>{formatMoney(totalMinor)}</Text>
+          </View>
           {overviewItems.map((item) => (
             <View key={item.label} style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>{item.label}</Text>
@@ -37,11 +53,12 @@ export default function HomeScreen() {
           {quickActions.map((action) => (
             <Pressable
               accessibilityRole="button"
-              key={action}
+              key={action.label}
+              onPress={() => action.route && router.push(action.route)}
               style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
             >
-              <Text style={styles.actionText}>{action}</Text>
-              <Text style={styles.actionHint}>เร็ว ๆ นี้</Text>
+              <Text style={styles.actionText}>{action.label}</Text>
+              <Text style={styles.actionHint}>{action.route ? 'เปิด' : 'เร็ว ๆ นี้'}</Text>
             </Pressable>
           ))}
         </View>
@@ -79,4 +96,3 @@ const styles = StyleSheet.create({
   noteTitle: { color: '#6E3C13', fontWeight: '800' },
   noteText: { marginTop: 5, color: '#704C2D', lineHeight: 21 },
 });
-

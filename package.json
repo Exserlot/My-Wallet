@@ -9,15 +9,17 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test",
+    "test": "vitest run",
     "export": "expo export"
   },
   "dependencies": {
     "expo": "~57.0.20",
     "expo-constants": "~57.0.17",
+    "expo-crypto": "~57.0.2",
     "expo-linking": "~57.0.9",
     "expo-router": "~57.0.19",
     "expo-splash-screen": "~57.0.8",
+    "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -30,6 +32,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.2",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.0"
   }
 }
