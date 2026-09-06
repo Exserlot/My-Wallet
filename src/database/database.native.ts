@@ -122,6 +122,30 @@ async function migrate(database: SQLiteDatabase) {
         ON fixed_cost_occurrences(due_at, status);
       PRAGMA user_version = 5;
     `);
+    currentVersion = 5;
+  }
+
+  if (currentVersion === 5) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS planned_purchases (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        quantity INTEGER NOT NULL CHECK (quantity >= 1),
+        estimated_unit_minor INTEGER CHECK (estimated_unit_minor >= 0),
+        category_id TEXT REFERENCES expense_categories(id),
+        merchant TEXT,
+        note TEXT,
+        priority TEXT NOT NULL CHECK (priority IN ('low', 'normal', 'high')),
+        status TEXT NOT NULL CHECK (status IN ('active', 'purchased', 'archived')),
+        expense_id TEXT REFERENCES transactions(id),
+        created_at TEXT NOT NULL,
+        purchased_at TEXT,
+        archived_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS planned_purchases_status_idx
+        ON planned_purchases(status, priority, created_at DESC);
+      PRAGMA user_version = 6;
+    `);
   }
 }
 

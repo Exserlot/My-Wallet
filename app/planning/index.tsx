@@ -86,10 +86,13 @@ export default function PlanningScreen() {
           </View>
           <Text style={styles.fixedCostLink}>เปิด ›</Text>
         </Pressable>
-        <View style={styles.comingCard}>
-          <Text style={styles.comingTitle}>ของที่ต้องซื้อ</Text>
-          <Text style={styles.muted}>จะเชื่อมเข้ากับหน้าวางแผนในขั้นถัดไป</Text>
-        </View>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/planning/shopping-list')} style={styles.fixedCostCard}>
+          <View>
+            <Text style={styles.comingTitle}>ของที่ต้องซื้อ</Text>
+            <Text style={styles.muted}>เก็บ Wishlist ไว้ข้ามเดือน โดยยังไม่หักงบ</Text>
+          </View>
+          <Text style={styles.fixedCostLink}>เปิด ›</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

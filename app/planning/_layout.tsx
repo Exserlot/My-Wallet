@@ -12,6 +12,7 @@ export default function PlanningLayout() {
       <Stack.Screen name="index" options={{ title: 'วางแผน' }} />
       <Stack.Screen name="budget" options={{ title: 'ตั้งงบเดือน' }} />
       <Stack.Screen name="fixed-costs" options={{ headerShown: false }} />
+      <Stack.Screen name="shopping-list" options={{ headerShown: false }} />
     </Stack>
   );
 }
