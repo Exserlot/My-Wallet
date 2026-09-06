@@ -85,6 +85,43 @@ async function migrate(database: SQLiteDatabase) {
         ON budget_plan_revisions(budget_cycle_id, created_at DESC);
       PRAGMA user_version = 4;
     `);
+    currentVersion = 4;
+  }
+
+  if (currentVersion === 4) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS fixed_cost_schedules (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        category_id TEXT NOT NULL REFERENCES expense_categories(id),
+        estimated_minor INTEGER NOT NULL CHECK (estimated_minor > 0),
+        wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        frequency TEXT NOT NULL CHECK (frequency IN ('monthly', 'every-n-months', 'yearly', 'once')),
+        interval_months INTEGER NOT NULL CHECK (interval_months >= 1),
+        due_day INTEGER NOT NULL CHECK (due_day BETWEEN 1 AND 31),
+        first_due_at TEXT NOT NULL,
+        payee TEXT,
+        note TEXT,
+        reminders_enabled INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        archived_at TEXT
+      );
+      CREATE TABLE IF NOT EXISTS fixed_cost_occurrences (
+        id TEXT PRIMARY KEY NOT NULL,
+        schedule_id TEXT NOT NULL REFERENCES fixed_cost_schedules(id),
+        category_id TEXT NOT NULL REFERENCES expense_categories(id),
+        wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        estimated_minor INTEGER NOT NULL CHECK (estimated_minor > 0),
+        due_at TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('upcoming', 'due', 'overdue', 'paid', 'skipped')),
+        expense_id TEXT REFERENCES transactions(id),
+        created_at TEXT NOT NULL,
+        UNIQUE(schedule_id, due_at)
+      );
+      CREATE INDEX IF NOT EXISTS fixed_cost_occurrences_due_idx
+        ON fixed_cost_occurrences(due_at, status);
+      PRAGMA user_version = 5;
+    `);
   }
 }
 

@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { budgetUsagePercent } from '@/domain/budgets';
 import { formatMoney } from '@/domain/wallets';
 import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';
+import { useFixedCosts } from '@/features/fixed-costs/use-fixed-costs';
 
 export default function PlanningScreen() {
   const { budget, loading, error } = useMonthlyBudget();
+  const { occurrences } = useFixedCosts();
   const monthLabel = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date());
 
   return (
@@ -73,8 +75,15 @@ export default function PlanningScreen() {
           </>
         ) : null}
 
+        <Pressable accessibilityRole="button" onPress={() => router.push('/planning/fixed-costs')} style={styles.fixedCostCard}>
+          <View>
+            <Text style={styles.comingTitle}>Fixed Cost</Text>
+            <Text style={styles.muted}>{occurrences.length > 0 ? `มีกำหนดจ่าย ${occurrences.length} รายการใน 4 เดือนนี้` : 'วางแผนค่าใช้จ่ายที่เกิดซ้ำ'}</Text>
+          </View>
+          <Text style={styles.fixedCostLink}>เปิด ›</Text>
+        </Pressable>
         <View style={styles.comingCard}>
-          <Text style={styles.comingTitle}>Fixed Cost และของที่ต้องซื้อ</Text>
+          <Text style={styles.comingTitle}>ของที่ต้องซื้อ</Text>
           <Text style={styles.muted}>จะเชื่อมเข้ากับหน้าวางแผนในขั้นถัดไป</Text>
         </View>
       </ScrollView>
@@ -112,6 +121,8 @@ const styles = StyleSheet.create({
   progressDanger: { backgroundColor: '#B34B43' },
   emptyLine: { padding: 15, color: '#66736A', textAlign: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#B8C1B9', borderRadius: 14 },
   comingCard: { marginTop: 6, padding: 16, borderRadius: 14, backgroundColor: '#ECEFE8' },
+  fixedCostCard: { marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 14, backgroundColor: '#FFFEF9' },
+  fixedCostLink: { color: '#176B48', fontWeight: '800' },
   comingTitle: { color: '#526158', fontWeight: '700' },
   muted: { color: '#66736A', fontSize: 12, lineHeight: 18 },
   error: { color: '#A93D38' },

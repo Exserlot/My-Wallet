@@ -1,5 +1,6 @@
 import type { TransactionKind } from '@/domain/transactions';
 import type { ExpenseCategory } from '@/domain/expense-categories';
+import type { FixedCostFrequency, FixedCostOccurrenceStatus } from '@/domain/fixed-costs';
 import type { Wallet } from '@/domain/wallets';
 
 export type WebTransaction = Readonly<{
@@ -33,13 +34,44 @@ export type WebBudgetRevision = Readonly<{
   createdAt: string;
 }>;
 
+export type WebFixedCostSchedule = Readonly<{
+  id: string;
+  name: string;
+  categoryId: string;
+  estimatedMinor: number;
+  walletId: string;
+  frequency: FixedCostFrequency;
+  intervalMonths: number;
+  dueDay: number;
+  firstDueAt: string;
+  payee: string | null;
+  note: string | null;
+  remindersEnabled: boolean;
+  createdAt: string;
+  archivedAt: string | null;
+}>;
+
+export type WebFixedCostOccurrence = Readonly<{
+  id: string;
+  scheduleId: string;
+  categoryId: string;
+  walletId: string;
+  estimatedMinor: number;
+  dueAt: string;
+  status: FixedCostOccurrenceStatus;
+  expenseId: string | null;
+  createdAt: string;
+}>;
+
 export type WebDatabase = Readonly<{
-  version: 4;
+  version: 5;
   wallets: Wallet[];
   transactions: WebTransaction[];
   expenseCategories: ExpenseCategory[];
   budgetCycles: WebBudgetCycle[];
   budgetRevisions: WebBudgetRevision[];
+  fixedCostSchedules: WebFixedCostSchedule[];
+  fixedCostOccurrences: WebFixedCostOccurrence[];
 }>;
 
 type LegacyDatabase = Readonly<{
@@ -65,18 +97,30 @@ type VersionThreeDatabase = Readonly<{
   expenseCategories: ExpenseCategory[];
 }>;
 
-const storageKey = 'my-wallet.database.v4';
+type VersionFourDatabase = Readonly<{
+  version: 4;
+  wallets: Wallet[];
+  transactions: WebTransaction[];
+  expenseCategories: ExpenseCategory[];
+  budgetCycles: WebBudgetCycle[];
+  budgetRevisions: WebBudgetRevision[];
+}>;
+
+const storageKey = 'my-wallet.database.v5';
+const versionFourStorageKey = 'my-wallet.database.v4';
 const versionThreeStorageKey = 'my-wallet.database.v3';
 const versionTwoStorageKey = 'my-wallet.database.v2';
 const legacyStorageKey = 'my-wallet.database.v1';
 
 const emptyDatabase = (): WebDatabase => ({
-  version: 4,
+  version: 5,
   wallets: [],
   transactions: [],
   expenseCategories: [],
   budgetCycles: [],
   budgetRevisions: [],
+  fixedCostSchedules: [],
+  fixedCostOccurrences: [],
 });
 
 function migrateLegacyDatabase(): WebDatabase | null {
@@ -87,7 +131,7 @@ function migrateLegacyDatabase(): WebDatabase | null {
     const legacy = JSON.parse(legacyValue) as LegacyDatabase;
     const createdAt = new Date().toISOString();
     return {
-      version: 4,
+      version: 5,
       wallets: legacy.wallets ?? [],
       transactions: (legacy.openingBalances ?? []).map((balance) => ({
         ...balance,
@@ -100,6 +144,8 @@ function migrateLegacyDatabase(): WebDatabase | null {
       expenseCategories: [],
       budgetCycles: [],
       budgetRevisions: [],
+      fixedCostSchedules: [],
+      fixedCostOccurrences: [],
     };
   } catch {
     return null;
@@ -111,11 +157,22 @@ export function readWebDatabase(): WebDatabase {
   const value = localStorage.getItem(storageKey);
 
   if (!value) {
+    const versionFourValue = localStorage.getItem(versionFourStorageKey);
+    if (versionFourValue) {
+      try {
+        const versionFour = JSON.parse(versionFourValue) as VersionFourDatabase;
+        const migrated: WebDatabase = { ...versionFour, version: 5, fixedCostSchedules: [], fixedCostOccurrences: [] };
+        writeWebDatabase(migrated);
+        return migrated;
+      } catch {
+        // Fall through to an older migration or an empty database.
+      }
+    }
     const versionThreeValue = localStorage.getItem(versionThreeStorageKey);
     if (versionThreeValue) {
       try {
         const versionThree = JSON.parse(versionThreeValue) as VersionThreeDatabase;
-        const migrated: WebDatabase = { ...versionThree, version: 4, budgetCycles: [], budgetRevisions: [] };
+        const migrated: WebDatabase = { ...versionThree, version: 5, budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -126,7 +183,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionTwoValue) {
       try {
         const versionTwo = JSON.parse(versionTwoValue) as VersionTwoDatabase;
-        const migrated: WebDatabase = { ...versionTwo, version: 4, expenseCategories: [], budgetCycles: [], budgetRevisions: [] };
+        const migrated: WebDatabase = { ...versionTwo, version: 5, expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
