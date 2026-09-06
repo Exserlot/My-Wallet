@@ -14,11 +14,32 @@ export type WebTransaction = Readonly<{
   source: 'manual' | 'bank-slip';
 }>;
 
+export type WebBudgetCycle = Readonly<{
+  id: string;
+  startAt: string;
+  endAt: string;
+  totalMinor: number;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  allocations: readonly Readonly<{ categoryId: string; amountMinor: number }>[];
+}>;
+
+export type WebBudgetRevision = Readonly<{
+  id: string;
+  budgetCycleId: string;
+  totalMinor: number;
+  allocations: readonly Readonly<{ categoryId: string; amountMinor: number }>[];
+  createdAt: string;
+}>;
+
 export type WebDatabase = Readonly<{
-  version: 3;
+  version: 4;
   wallets: Wallet[];
   transactions: WebTransaction[];
   expenseCategories: ExpenseCategory[];
+  budgetCycles: WebBudgetCycle[];
+  budgetRevisions: WebBudgetRevision[];
 }>;
 
 type LegacyDatabase = Readonly<{
@@ -37,11 +58,26 @@ type VersionTwoDatabase = Readonly<{
   transactions: WebTransaction[];
 }>;
 
-const storageKey = 'my-wallet.database.v3';
+type VersionThreeDatabase = Readonly<{
+  version: 3;
+  wallets: Wallet[];
+  transactions: WebTransaction[];
+  expenseCategories: ExpenseCategory[];
+}>;
+
+const storageKey = 'my-wallet.database.v4';
+const versionThreeStorageKey = 'my-wallet.database.v3';
 const versionTwoStorageKey = 'my-wallet.database.v2';
 const legacyStorageKey = 'my-wallet.database.v1';
 
-const emptyDatabase = (): WebDatabase => ({ version: 3, wallets: [], transactions: [], expenseCategories: [] });
+const emptyDatabase = (): WebDatabase => ({
+  version: 4,
+  wallets: [],
+  transactions: [],
+  expenseCategories: [],
+  budgetCycles: [],
+  budgetRevisions: [],
+});
 
 function migrateLegacyDatabase(): WebDatabase | null {
   const legacyValue = localStorage.getItem(legacyStorageKey);
@@ -51,7 +87,7 @@ function migrateLegacyDatabase(): WebDatabase | null {
     const legacy = JSON.parse(legacyValue) as LegacyDatabase;
     const createdAt = new Date().toISOString();
     return {
-      version: 3,
+      version: 4,
       wallets: legacy.wallets ?? [],
       transactions: (legacy.openingBalances ?? []).map((balance) => ({
         ...balance,
@@ -62,6 +98,8 @@ function migrateLegacyDatabase(): WebDatabase | null {
         source: 'manual',
       })),
       expenseCategories: [],
+      budgetCycles: [],
+      budgetRevisions: [],
     };
   } catch {
     return null;
@@ -73,11 +111,22 @@ export function readWebDatabase(): WebDatabase {
   const value = localStorage.getItem(storageKey);
 
   if (!value) {
+    const versionThreeValue = localStorage.getItem(versionThreeStorageKey);
+    if (versionThreeValue) {
+      try {
+        const versionThree = JSON.parse(versionThreeValue) as VersionThreeDatabase;
+        const migrated: WebDatabase = { ...versionThree, version: 4, budgetCycles: [], budgetRevisions: [] };
+        writeWebDatabase(migrated);
+        return migrated;
+      } catch {
+        // Fall through to an older migration or an empty database.
+      }
+    }
     const versionTwoValue = localStorage.getItem(versionTwoStorageKey);
     if (versionTwoValue) {
       try {
         const versionTwo = JSON.parse(versionTwoValue) as VersionTwoDatabase;
-        const migrated: WebDatabase = { ...versionTwo, version: 3, expenseCategories: [] };
+        const migrated: WebDatabase = { ...versionTwo, version: 4, expenseCategories: [], budgetCycles: [], budgetRevisions: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {

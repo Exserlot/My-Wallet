@@ -52,6 +52,39 @@ async function migrate(database: SQLiteDatabase) {
       );
       PRAGMA user_version = 3;
     `);
+    currentVersion = 3;
+  }
+
+  if (currentVersion === 3) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS budget_cycles (
+        id TEXT PRIMARY KEY NOT NULL,
+        start_at TEXT NOT NULL,
+        end_at TEXT NOT NULL,
+        total_minor INTEGER NOT NULL CHECK (total_minor > 0),
+        currency TEXT NOT NULL CHECK (currency = 'THB'),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        closed_at TEXT,
+        UNIQUE(start_at, end_at)
+      );
+      CREATE TABLE IF NOT EXISTS budget_allocations (
+        budget_cycle_id TEXT NOT NULL REFERENCES budget_cycles(id) ON DELETE CASCADE,
+        category_id TEXT NOT NULL REFERENCES expense_categories(id),
+        amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+        PRIMARY KEY (budget_cycle_id, category_id)
+      );
+      CREATE TABLE IF NOT EXISTS budget_plan_revisions (
+        id TEXT PRIMARY KEY NOT NULL,
+        budget_cycle_id TEXT NOT NULL REFERENCES budget_cycles(id) ON DELETE CASCADE,
+        total_minor INTEGER NOT NULL,
+        allocations_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS budget_plan_revisions_cycle_idx
+        ON budget_plan_revisions(budget_cycle_id, created_at DESC);
+      PRAGMA user_version = 4;
+    `);
   }
 }
 

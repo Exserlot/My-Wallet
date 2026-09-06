@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { formatMoney } from '@/domain/wallets';
+import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';
 import { useTransactions } from '@/features/transactions/use-transactions';
 import { useWallets } from '@/features/wallets/use-wallets';
 
@@ -10,11 +11,13 @@ const quickActions: { label: string; route?: Href }[] = [
   { label: 'เพิ่มรายรับ', route: { pathname: '/transactions/new', params: { kind: 'income' } } },
   { label: 'เพิ่มรายจ่าย', route: { pathname: '/transactions/new', params: { kind: 'expense' } } },
   { label: 'ดูรายการ', route: '/transactions' },
+  { label: 'วางแผนงบ', route: '/planning' },
   { label: 'จัดการกระเป๋า', route: '/wallets' },
 ];
 
 export default function HomeScreen() {
   const { wallets } = useWallets();
+  const { budget } = useMonthlyBudget();
   const { transactions, totals } = useTransactions(5);
   const totalMinor = wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
   const monthLabel = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date());
@@ -48,6 +51,24 @@ export default function HomeScreen() {
             </View>
           ))}
         </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>งบเดือนนี้</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/planning')}>
+            <Text style={styles.sectionLink}>{budget ? 'ดูแผน' : 'ตั้งงบ'}</Text>
+          </Pressable>
+        </View>
+        {budget ? (
+          <View style={[styles.budgetCard, budget.remainingMinor < 0 && styles.budgetOver]}>
+            <Text style={styles.budgetLabel}>{budget.remainingMinor < 0 ? 'ใช้เกินงบ' : 'งบคงเหลือ'}</Text>
+            <Text style={styles.budgetValue}>{formatMoney(budget.remainingMinor)}</Text>
+            <Text style={styles.budgetMeta}>ใช้ไป {formatMoney(budget.spentMinor)} จาก {formatMoney(budget.totalMinor)} · ยังไม่จัดสรร {formatMoney(budget.unallocatedMinor)}</Text>
+          </View>
+        ) : (
+          <Pressable accessibilityRole="button" onPress={() => router.push('/planning/budget')} style={styles.emptyBudget}>
+            <Text style={styles.emptyBudgetText}>ยังไม่ได้ตั้งงบเดือนนี้ · กดเพื่อเริ่มวางแผน</Text>
+          </Pressable>
+        )}
 
         <Text style={styles.sectionTitle}>ทำรายการ</Text>
         <View style={styles.actionGrid}>
@@ -112,6 +133,13 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   sectionTitle: { color: '#17211B', fontSize: 19, fontWeight: '800' },
   sectionLink: { color: '#176B48', fontWeight: '700' },
+  budgetCard: { padding: 16, borderRadius: 16, backgroundColor: '#DCEDDF' },
+  budgetOver: { backgroundColor: '#FAE3E0' },
+  budgetLabel: { color: '#526158', fontSize: 12 },
+  budgetValue: { marginTop: 3, color: '#173F2B', fontSize: 23, fontWeight: '800' },
+  budgetMeta: { marginTop: 5, color: '#526158', fontSize: 12 },
+  emptyBudget: { padding: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: '#176B48', borderRadius: 14 },
+  emptyBudgetText: { color: '#176B48', textAlign: 'center', fontWeight: '700' },
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionButton: { width: '48%', minWidth: 150, flexGrow: 1, padding: 16, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 16, backgroundColor: '#FFFEF9' },
   actionPressed: { opacity: 0.7 },
