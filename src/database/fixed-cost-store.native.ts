@@ -4,6 +4,7 @@ import {
   occurrenceDueAtForMonth,
   occurrenceStatus,
   validateFixedCostSchedule,
+  canResolveFixedCostOccurrence,
   type FixedCostFrequency,
   type FixedCostOccurrence,
   type FixedCostOccurrenceStatus,
@@ -11,7 +12,7 @@ import {
 } from '@/domain/fixed-costs';
 
 import { getDatabase } from './database';
-import type { CreateFixedCostScheduleInput, FixedCostRepository } from './fixed-cost-repository';
+import type { CreateFixedCostScheduleInput, FixedCostRepository, PayFixedCostOccurrenceInput } from './fixed-cost-repository';
 
 type ScheduleRow = {
   id: string;
@@ -44,6 +45,7 @@ type OccurrenceRow = {
   due_at: string;
   status: FixedCostOccurrenceStatus;
   expense_id: string | null;
+  actual_minor: number | null;
 };
 
 function toSchedule(row: ScheduleRow): FixedCostSchedule {
@@ -80,6 +82,7 @@ function toOccurrence(row: OccurrenceRow): FixedCostOccurrence {
     dueAt: row.due_at,
     status: row.status,
     expenseId: row.expense_id,
+    actualMinor: row.actual_minor,
   };
 }
 
@@ -108,6 +111,31 @@ async function findSchedule(id: string): Promise<FixedCostSchedule | null> {
   const database = await getDatabase();
   const row = await database.getFirstAsync<ScheduleRow>(`${scheduleSelect} WHERE fixed_cost_schedules.id = ?`, id);
   return row ? toSchedule(row) : null;
+}
+
+const occurrenceSelect = `SELECT
+  fixed_cost_occurrences.id,
+  fixed_cost_occurrences.schedule_id,
+  fixed_cost_schedules.name AS schedule_name,
+  fixed_cost_occurrences.category_id,
+  expense_categories.name AS category_name,
+  fixed_cost_occurrences.wallet_id,
+  wallets.name AS wallet_name,
+  fixed_cost_occurrences.estimated_minor,
+  fixed_cost_occurrences.due_at,
+  fixed_cost_occurrences.status,
+  fixed_cost_occurrences.expense_id,
+  transactions.amount_minor AS actual_minor
+FROM fixed_cost_occurrences
+JOIN fixed_cost_schedules ON fixed_cost_schedules.id = fixed_cost_occurrences.schedule_id
+JOIN expense_categories ON expense_categories.id = fixed_cost_occurrences.category_id
+JOIN wallets ON wallets.id = fixed_cost_occurrences.wallet_id
+LEFT JOIN transactions ON transactions.id = fixed_cost_occurrences.expense_id`;
+
+async function findOccurrence(id: string): Promise<FixedCostOccurrence | null> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<OccurrenceRow>(`${occurrenceSelect} WHERE fixed_cost_occurrences.id = ?`, id);
+  return row ? toOccurrence(row) : null;
 }
 
 async function validateReferences(input: CreateFixedCostScheduleInput) {
@@ -196,28 +224,78 @@ export const fixedCostRepository: FixedCostRepository = {
     await ensureOccurrences(startAt, endAt);
     const database = await getDatabase();
     const rows = await database.getAllAsync<OccurrenceRow>(
-      `SELECT
-        fixed_cost_occurrences.id,
-        fixed_cost_occurrences.schedule_id,
-        fixed_cost_schedules.name AS schedule_name,
-        fixed_cost_occurrences.category_id,
-        expense_categories.name AS category_name,
-        fixed_cost_occurrences.wallet_id,
-        wallets.name AS wallet_name,
-        fixed_cost_occurrences.estimated_minor,
-        fixed_cost_occurrences.due_at,
-        fixed_cost_occurrences.status,
-        fixed_cost_occurrences.expense_id
-      FROM fixed_cost_occurrences
-      JOIN fixed_cost_schedules ON fixed_cost_schedules.id = fixed_cost_occurrences.schedule_id
-      JOIN expense_categories ON expense_categories.id = fixed_cost_occurrences.category_id
-      JOIN wallets ON wallets.id = fixed_cost_occurrences.wallet_id
+      `${occurrenceSelect}
       WHERE fixed_cost_occurrences.due_at >= ? AND fixed_cost_occurrences.due_at < ?
       ORDER BY fixed_cost_occurrences.due_at`,
       startAt,
       endAt,
     );
     return rows.map(toOccurrence);
+  },
+
+  getOccurrence: findOccurrence,
+
+  async payOccurrence(input: PayFixedCostOccurrenceInput) {
+    if (!Number.isSafeInteger(input.actualMinor) || input.actualMinor <= 0) throw new Error('Actual amount must be positive minor units');
+    const database = await getDatabase();
+    const expenseId = randomUUID();
+    const createdAt = new Date().toISOString();
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const occurrence = await transaction.getFirstAsync<{
+        schedule_id: string;
+        schedule_name: string;
+        category_id: string;
+        status: FixedCostOccurrenceStatus;
+        expense_id: string | null;
+      }>(
+        `SELECT fixed_cost_occurrences.schedule_id, fixed_cost_schedules.name AS schedule_name,
+          fixed_cost_occurrences.category_id, fixed_cost_occurrences.status, fixed_cost_occurrences.expense_id
+         FROM fixed_cost_occurrences
+         JOIN fixed_cost_schedules ON fixed_cost_schedules.id = fixed_cost_occurrences.schedule_id
+         WHERE fixed_cost_occurrences.id = ?`,
+        input.occurrenceId,
+      );
+      if (!occurrence || occurrence.expense_id || !canResolveFixedCostOccurrence(occurrence.status)) throw new Error('Fixed cost occurrence is already resolved');
+      const wallet = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM wallets WHERE id = ?', input.walletId);
+      if (!wallet) throw new Error('Wallet not found');
+      await transaction.runAsync(
+        `INSERT INTO transactions
+          (id, wallet_id, kind, amount_minor, currency, occurred_at, created_at, category_id, note, source)
+         VALUES (?, ?, 'EXPENSE', ?, 'THB', ?, ?, ?, ?, 'manual')`,
+        expenseId,
+        input.walletId,
+        input.actualMinor,
+        input.occurredAt,
+        createdAt,
+        occurrence.category_id,
+        occurrence.schedule_name,
+      );
+      const result = await transaction.runAsync(
+        "UPDATE fixed_cost_occurrences SET wallet_id = ?, status = 'paid', expense_id = ? WHERE id = ? AND expense_id IS NULL AND status IN ('upcoming', 'due', 'overdue')",
+        input.walletId,
+        expenseId,
+        input.occurrenceId,
+      );
+      if (result.changes !== 1) throw new Error('Fixed cost occurrence changed while paying');
+      if (input.updateScheduleWallet) {
+        await transaction.runAsync('UPDATE fixed_cost_schedules SET wallet_id = ? WHERE id = ?', input.walletId, occurrence.schedule_id);
+      }
+    });
+    const paid = await findOccurrence(input.occurrenceId);
+    if (!paid) throw new Error('Fixed cost occurrence was not found after payment');
+    return paid;
+  },
+
+  async skipOccurrence(id) {
+    const database = await getDatabase();
+    const result = await database.runAsync(
+      "UPDATE fixed_cost_occurrences SET status = 'skipped' WHERE id = ? AND expense_id IS NULL AND status IN ('upcoming', 'due', 'overdue')",
+      id,
+    );
+    if (result.changes !== 1) throw new Error('Fixed cost occurrence is already resolved');
+    const skipped = await findOccurrence(id);
+    if (!skipped) throw new Error('Fixed cost occurrence was not found after skip');
+    return skipped;
   },
 
   async archiveSchedule(id) {

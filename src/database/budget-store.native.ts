@@ -56,7 +56,15 @@ async function findBudget(startAt: string, endAt: string): Promise<MonthlyBudget
     startAt,
     endAt,
   );
+  const fixedCostReservations = await database.getFirstAsync<{ reserved_minor: number }>(
+    `SELECT COALESCE(SUM(estimated_minor), 0) AS reserved_minor
+     FROM fixed_cost_occurrences
+     WHERE status IN ('upcoming', 'due', 'overdue') AND due_at >= ? AND due_at < ?`,
+    startAt,
+    endAt,
+  );
   const spentMinor = totalSpent?.spent_minor ?? 0;
+  const reservedFixedCostMinor = fixedCostReservations?.reserved_minor ?? 0;
   const allocatedMinor = allocations.reduce((sum, allocation) => sum + allocation.amount_minor, 0);
   return {
     id: cycle.id,
@@ -71,8 +79,10 @@ async function findBudget(startAt: string, endAt: string): Promise<MonthlyBudget
       spentMinor: allocation.spent_minor,
     })),
     spentMinor,
-    unallocatedMinor: cycle.total_minor - allocatedMinor,
+    reservedFixedCostMinor,
+    unallocatedMinor: cycle.total_minor - allocatedMinor - reservedFixedCostMinor,
     remainingMinor: cycle.total_minor - spentMinor,
+    availableAfterReservationsMinor: cycle.total_minor - spentMinor - reservedFixedCostMinor,
     updatedAt: cycle.updated_at,
   };
 }

@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { budgetRepository } from '@/database/budget-store';
 import { allocatedTotalMinor } from '@/domain/budgets';
+import { canResolveFixedCostOccurrence } from '@/domain/fixed-costs';
 import { currentMonthRange } from '@/domain/transactions';
 import { formatMoney, parseMoneyInput } from '@/domain/wallets';
 import { useExpenseCategories } from '@/features/expense-categories/use-expense-categories';
+import { useFixedCosts } from '@/features/fixed-costs/use-fixed-costs';
 
 function moneyInput(amountMinor: number): string {
   return (amountMinor / 100).toFixed(2);
@@ -15,6 +17,7 @@ function moneyInput(amountMinor: number): string {
 
 export default function BudgetEditorScreen() {
   const { categories, loading: categoriesLoading } = useExpenseCategories(true);
+  const { occurrences } = useFixedCosts();
   const [total, setTotal] = useState('');
   const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,10 @@ export default function BudgetEditorScreen() {
     amountMinor: parseMoneyInput(allocationInputs[category.id] || '0') ?? -1,
   }));
   const allocatedMinor = allocations.some((allocation) => allocation.amountMinor < 0) ? 0 : allocatedTotalMinor(allocations);
-  const unallocatedMinor = parsedTotal - allocatedMinor;
+  const reservedFixedCostMinor = occurrences
+    .filter((occurrence) => occurrence.dueAt >= range.start && occurrence.dueAt < range.end && canResolveFixedCostOccurrence(occurrence.status))
+    .reduce((sum, occurrence) => sum + occurrence.estimatedMinor, 0);
+  const unallocatedMinor = parsedTotal - allocatedMinor - reservedFixedCostMinor;
 
   async function save() {
     if (parsedTotal <= 0) {
@@ -95,6 +101,7 @@ export default function BudgetEditorScreen() {
           <View style={styles.balanceCard}>
             <Text style={styles.hint}>ยังไม่จัดสรร</Text>
             <Text style={[styles.balanceValue, unallocatedMinor < 0 && styles.danger]}>{formatMoney(unallocatedMinor)}</Text>
+            <Text style={styles.hint}>หักเงินที่กันไว้สำหรับ Fixed Cost {formatMoney(reservedFixedCostMinor)} แล้ว</Text>
           </View>
 
           <View style={styles.sectionHeader}>

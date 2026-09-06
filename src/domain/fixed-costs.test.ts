@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { clampedDueDate, occurrenceDueAtForMonth, occurrenceStatus, validateFixedCostSchedule } from './fixed-costs';
+import { canResolveFixedCostOccurrence, clampedDueDate, occurrenceDueAtForMonth, occurrenceStatus, validateFixedCostSchedule } from './fixed-costs';
 
 describe('fixed cost due dates', () => {
   it('uses the final day when a month has no requested day', () => {
@@ -33,5 +33,14 @@ describe('validateFixedCostSchedule', () => {
     expect(validateFixedCostSchedule({ name: '', estimatedMinor: 129000, intervalMonths: 1, dueDay: 31 })).not.toBeNull();
     expect(validateFixedCostSchedule({ name: 'ค่าเน็ต', estimatedMinor: 0, intervalMonths: 1, dueDay: 31 })).not.toBeNull();
     expect(validateFixedCostSchedule({ name: 'ค่าเน็ต', estimatedMinor: 129000, intervalMonths: 1, dueDay: 32 })).not.toBeNull();
+  });
+});
+
+describe('canResolveFixedCostOccurrence', () => {
+  it('prevents paid or skipped occurrences from being resolved twice', () => {
+    expect(canResolveFixedCostOccurrence('upcoming')).toBe(true);
+    expect(canResolveFixedCostOccurrence('overdue')).toBe(true);
+    expect(canResolveFixedCostOccurrence('paid')).toBe(false);
+    expect(canResolveFixedCostOccurrence('skipped')).toBe(false);
   });
 });

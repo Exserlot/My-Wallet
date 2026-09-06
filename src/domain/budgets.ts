@@ -15,8 +15,10 @@ export type MonthlyBudget = Readonly<{
   currency: CurrencyCode;
   allocations: BudgetAllocation[];
   spentMinor: number;
+  reservedFixedCostMinor: number;
   unallocatedMinor: number;
   remainingMinor: number;
+  availableAfterReservationsMinor: number;
   updatedAt: string;
 }>;
 

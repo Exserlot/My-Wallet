@@ -12,6 +12,10 @@ function toMonthlyBudget(cycle: WebBudgetCycle): MonthlyBudget {
   ));
   const spentMinor = expenses.reduce((sum, expense) => sum + expense.amountMinor, 0);
   const allocatedMinor = cycle.allocations.reduce((sum, allocation) => sum + allocation.amountMinor, 0);
+  const reservedFixedCostMinor = database.fixedCostOccurrences
+    .filter((occurrence) => occurrence.dueAt >= cycle.startAt && occurrence.dueAt < cycle.endAt)
+    .filter((occurrence) => occurrence.status === 'upcoming' || occurrence.status === 'due' || occurrence.status === 'overdue')
+    .reduce((sum, occurrence) => sum + occurrence.estimatedMinor, 0);
   return {
     id: cycle.id,
     startAt: cycle.startAt,
@@ -27,8 +31,10 @@ function toMonthlyBudget(cycle: WebBudgetCycle): MonthlyBudget {
         .reduce((sum, expense) => sum + expense.amountMinor, 0),
     })),
     spentMinor,
-    unallocatedMinor: cycle.totalMinor - allocatedMinor,
+    reservedFixedCostMinor,
+    unallocatedMinor: cycle.totalMinor - allocatedMinor - reservedFixedCostMinor,
     remainingMinor: cycle.totalMinor - spentMinor,
+    availableAfterReservationsMinor: cycle.totalMinor - spentMinor - reservedFixedCostMinor,
     updatedAt: cycle.updatedAt,
   };
 }

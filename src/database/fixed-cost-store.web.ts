@@ -1,6 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 
-import { occurrenceDueAtForMonth, occurrenceStatus, validateFixedCostSchedule, type FixedCostOccurrence, type FixedCostSchedule } from '@/domain/fixed-costs';
+import { canResolveFixedCostOccurrence, occurrenceDueAtForMonth, occurrenceStatus, validateFixedCostSchedule, type FixedCostOccurrence, type FixedCostSchedule } from '@/domain/fixed-costs';
 
 import type { FixedCostRepository } from './fixed-cost-repository';
 import { readWebDatabase, writeWebDatabase, type WebFixedCostOccurrence, type WebFixedCostSchedule } from './web-database';
@@ -19,7 +19,8 @@ function toOccurrence(occurrence: WebFixedCostOccurrence): FixedCostOccurrence {
   const category = database.expenseCategories.find((item) => item.id === occurrence.categoryId);
   const wallet = database.wallets.find((item) => item.id === occurrence.walletId);
   if (!schedule || !category || !wallet) throw new Error('Fixed cost occurrence reference not found');
-  return { ...occurrence, scheduleName: schedule.name, categoryName: category.name, walletName: wallet.name };
+  const expense = database.transactions.find((item) => item.id === occurrence.expenseId);
+  return { ...occurrence, scheduleName: schedule.name, categoryName: category.name, walletName: wallet.name, actualMinor: expense?.amountMinor ?? null };
 }
 
 function ensureOccurrences(startAt: string, endAt: string) {
@@ -96,6 +97,54 @@ export const fixedCostRepository: FixedCostRepository = {
       .filter((occurrence) => occurrence.dueAt >= startAt && occurrence.dueAt < endAt)
       .sort((left, right) => left.dueAt.localeCompare(right.dueAt))
       .map(toOccurrence);
+  },
+
+  async getOccurrence(id) {
+    const occurrence = readWebDatabase().fixedCostOccurrences.find((item) => item.id === id);
+    return occurrence ? toOccurrence(occurrence) : null;
+  },
+
+  async payOccurrence(input) {
+    if (!Number.isSafeInteger(input.actualMinor) || input.actualMinor <= 0) throw new Error('Actual amount must be positive minor units');
+    const database = readWebDatabase();
+    const occurrence = database.fixedCostOccurrences.find((item) => item.id === input.occurrenceId);
+    if (!occurrence || occurrence.expenseId || !canResolveFixedCostOccurrence(occurrence.status)) throw new Error('Fixed cost occurrence is already resolved');
+    if (!database.wallets.some((wallet) => wallet.id === input.walletId)) throw new Error('Wallet not found');
+    const schedule = database.fixedCostSchedules.find((item) => item.id === occurrence.scheduleId);
+    if (!schedule) throw new Error('Fixed cost schedule not found');
+    const expenseId = randomUUID();
+    const updatedOccurrence: WebFixedCostOccurrence = { ...occurrence, walletId: input.walletId, status: 'paid', expenseId };
+    writeWebDatabase({
+      ...database,
+      transactions: [...database.transactions, {
+        id: expenseId,
+        walletId: input.walletId,
+        kind: 'expense',
+        amountMinor: input.actualMinor,
+        occurredAt: input.occurredAt,
+        createdAt: new Date().toISOString(),
+        categoryId: occurrence.categoryId,
+        note: schedule.name,
+        source: 'manual',
+      }],
+      fixedCostOccurrences: database.fixedCostOccurrences.map((item) => item.id === occurrence.id ? updatedOccurrence : item),
+      fixedCostSchedules: input.updateScheduleWallet
+        ? database.fixedCostSchedules.map((item) => item.id === schedule.id ? { ...item, walletId: input.walletId } : item)
+        : database.fixedCostSchedules,
+    });
+    return toOccurrence(updatedOccurrence);
+  },
+
+  async skipOccurrence(id) {
+    const database = readWebDatabase();
+    const occurrence = database.fixedCostOccurrences.find((item) => item.id === id);
+    if (!occurrence || occurrence.expenseId || !canResolveFixedCostOccurrence(occurrence.status)) throw new Error('Fixed cost occurrence is already resolved');
+    const updatedOccurrence: WebFixedCostOccurrence = { ...occurrence, status: 'skipped' };
+    writeWebDatabase({
+      ...database,
+      fixedCostOccurrences: database.fixedCostOccurrences.map((item) => item.id === id ? updatedOccurrence : item),
+    });
+    return toOccurrence(updatedOccurrence);
   },
 
   async archiveSchedule(id) {

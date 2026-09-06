@@ -34,9 +34,9 @@ export default function PlanningScreen() {
 
         {budget ? (
           <>
-            <View style={[styles.heroCard, budget.remainingMinor < 0 && styles.overCard]}>
-              <Text style={styles.heroLabel}>{budget.remainingMinor < 0 ? 'ใช้เกินงบแล้ว' : 'งบคงเหลือ'}</Text>
-              <Text style={styles.heroValue}>{formatMoney(budget.remainingMinor)}</Text>
+            <View style={[styles.heroCard, budget.availableAfterReservationsMinor < 0 && styles.overCard]}>
+              <Text style={styles.heroLabel}>{budget.availableAfterReservationsMinor < 0 ? 'เกินงบหลังกัน Fixed Cost' : 'พร้อมใช้หลังกัน Fixed Cost'}</Text>
+              <Text style={styles.heroValue}>{formatMoney(budget.availableAfterReservationsMinor)}</Text>
               <Text style={styles.heroMeta}>ใช้ไป {formatMoney(budget.spentMinor)} จาก {formatMoney(budget.totalMinor)} · {budgetUsagePercent(budget.spentMinor, budget.totalMinor)}%</Text>
             </View>
 
@@ -47,7 +47,11 @@ export default function PlanningScreen() {
               </View>
               <View style={styles.metricCard}>
                 <Text style={styles.muted}>แบ่งแล้ว</Text>
-                <Text style={styles.metricValue}>{formatMoney(budget.totalMinor - budget.unallocatedMinor)}</Text>
+                <Text style={styles.metricValue}>{formatMoney(budget.totalMinor - budget.unallocatedMinor - budget.reservedFixedCostMinor)}</Text>
+              </View>
+              <View style={styles.metricCard}>
+                <Text style={styles.muted}>กัน Fixed Cost</Text>
+                <Text style={styles.metricValue}>{formatMoney(budget.reservedFixedCostMinor)}</Text>
               </View>
             </View>
 

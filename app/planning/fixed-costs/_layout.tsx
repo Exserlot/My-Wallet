@@ -11,6 +11,7 @@ export default function FixedCostLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'Fixed Cost' }} />
       <Stack.Screen name="new" options={{ title: 'เพิ่ม Fixed Cost' }} />
+      <Stack.Screen name="[id]" options={{ title: 'กำหนดจ่าย' }} />
     </Stack>
   );
 }

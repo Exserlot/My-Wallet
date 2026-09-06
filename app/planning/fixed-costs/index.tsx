@@ -42,7 +42,12 @@ export default function FixedCostListScreen() {
         <Text style={styles.sectionTitle}>กำหนดจ่าย 4 เดือนนี้</Text>
         {!loading && occurrences.length === 0 ? <Text style={styles.empty}>ยังไม่มีกำหนดจ่าย</Text> : null}
         {occurrences.map((occurrence) => (
-          <View key={occurrence.id} style={[styles.occurrenceCard, occurrence.status === 'overdue' && styles.overdueCard]}>
+          <Pressable
+            accessibilityRole="button"
+            key={occurrence.id}
+            onPress={() => router.push({ pathname: '/planning/fixed-costs/[id]', params: { id: occurrence.id } })}
+            style={({ pressed }) => [styles.occurrenceCard, occurrence.status === 'overdue' && styles.overdueCard, pressed && styles.pressed]}
+          >
             <View style={styles.flex}>
               <Text style={styles.itemName}>{occurrence.scheduleName}</Text>
               <Text style={styles.meta}>{occurrence.categoryName} · {occurrence.walletName}</Text>
@@ -51,7 +56,7 @@ export default function FixedCostListScreen() {
               </Text>
             </View>
             <Text style={styles.amount}>{formatMoney(occurrence.estimatedMinor)}</Text>
-          </View>
+          </Pressable>
         ))}
 
         <Text style={styles.sectionTitle}>กฎ Fixed Cost</Text>
@@ -73,8 +78,8 @@ export default function FixedCostListScreen() {
         ))}
 
         <View style={styles.noteCard}>
-          <Text style={styles.noteTitle}>ยังไม่หักเงินจริง</Text>
-          <Text style={styles.muted}>กำหนดจ่ายเป็นเพียงแผน ระบบจะหัก Wallet เมื่อคุณยืนยันจ่ายในขั้นถัดไป</Text>
+          <Text style={styles.noteTitle}>กำหนดจ่ายยังไม่หักเงินจริง</Text>
+          <Text style={styles.muted}>เปิดแต่ละรายการเพื่อยืนยันจ่ายหรือข้าม ระบบจะหัก Wallet และสร้าง Expense เฉพาะเมื่อยืนยันจ่าย</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -105,4 +110,5 @@ const styles = StyleSheet.create({
   noteTitle: { color: '#704C2D', fontWeight: '800' },
   muted: { color: '#66736A', fontSize: 12, lineHeight: 18 },
   error: { color: '#A93D38' },
+  pressed: { opacity: 0.7 },
 });

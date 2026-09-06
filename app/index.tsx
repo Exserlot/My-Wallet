@@ -59,10 +59,10 @@ export default function HomeScreen() {
           </Pressable>
         </View>
         {budget ? (
-          <View style={[styles.budgetCard, budget.remainingMinor < 0 && styles.budgetOver]}>
-            <Text style={styles.budgetLabel}>{budget.remainingMinor < 0 ? 'ใช้เกินงบ' : 'งบคงเหลือ'}</Text>
-            <Text style={styles.budgetValue}>{formatMoney(budget.remainingMinor)}</Text>
-            <Text style={styles.budgetMeta}>ใช้ไป {formatMoney(budget.spentMinor)} จาก {formatMoney(budget.totalMinor)} · ยังไม่จัดสรร {formatMoney(budget.unallocatedMinor)}</Text>
+          <View style={[styles.budgetCard, budget.availableAfterReservationsMinor < 0 && styles.budgetOver]}>
+            <Text style={styles.budgetLabel}>{budget.availableAfterReservationsMinor < 0 ? 'เกินงบหลังกัน Fixed Cost' : 'พร้อมใช้หลังกัน Fixed Cost'}</Text>
+            <Text style={styles.budgetValue}>{formatMoney(budget.availableAfterReservationsMinor)}</Text>
+            <Text style={styles.budgetMeta}>จ่ายจริง {formatMoney(budget.spentMinor)} · กัน Fixed Cost {formatMoney(budget.reservedFixedCostMinor)} · ยังไม่จัดสรร {formatMoney(budget.unallocatedMinor)}</Text>
           </View>
         ) : (
           <Pressable accessibilityRole="button" onPress={() => router.push('/planning/budget')} style={styles.emptyBudget}>

@@ -34,6 +34,7 @@ export type FixedCostOccurrence = Readonly<{
   dueAt: string;
   status: FixedCostOccurrenceStatus;
   expenseId: string | null;
+  actualMinor: number | null;
 }>;
 
 type RecurrenceRule = Readonly<{
@@ -91,4 +92,8 @@ export function frequencyLabel(frequency: FixedCostFrequency, intervalMonths: nu
   if (frequency === 'every-n-months') return `ทุก ${intervalMonths} เดือน`;
   if (frequency === 'yearly') return 'ทุกปี';
   return 'ครั้งเดียว';
+}
+
+export function canResolveFixedCostOccurrence(status: FixedCostOccurrenceStatus): boolean {
+  return status === 'upcoming' || status === 'due' || status === 'overdue';
 }
