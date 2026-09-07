@@ -1,7 +1,8 @@
 import type { FixedCostOccurrence, FixedCostSchedule } from '@/domain/fixed-costs';
+import type { NotificationPreferences } from '@/domain/preferences';
 
 export const localNotificationService = {
   async getPermissionState() { return 'unsupported' as const; },
   async requestPermission() { return 'unsupported' as const; },
-  async syncFixedCostReminders(_schedules: readonly FixedCostSchedule[], _occurrences: readonly FixedCostOccurrence[]) {},
+  async syncFixedCostReminders(_schedules: readonly FixedCostSchedule[], _occurrences: readonly FixedCostOccurrence[], _preferences?: NotificationPreferences) {},
 };

@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 
 import type { FixedCostOccurrence, FixedCostSchedule } from '@/domain/fixed-costs';
 import { buildFixedCostReminderGroups, type FixedCostReminderPhase } from '@/domain/notification-reminders';
+import { defaultNotificationPreferences, type NotificationPreferences } from '@/domain/preferences';
+import { formatMoney } from '@/domain/wallets';
 
 const channelId = 'fixed-cost-reminders';
 const owner = 'my-wallet-fixed-cost';
@@ -42,20 +44,24 @@ export const localNotificationService = {
     return permissionState((await Notifications.requestPermissionsAsync()).status);
   },
 
-  async syncFixedCostReminders(schedules: readonly FixedCostSchedule[], occurrences: readonly FixedCostOccurrence[]) {
-    if (await this.getPermissionState() !== 'granted') return;
+  async syncFixedCostReminders(schedules: readonly FixedCostSchedule[], occurrences: readonly FixedCostOccurrence[], preferences: NotificationPreferences = defaultNotificationPreferences) {
     const existing = await Notifications.getAllScheduledNotificationsAsync();
     await Promise.all(existing
       .filter((notification) => notification.content.data?.owner === owner)
       .map((notification) => Notifications.cancelScheduledNotificationAsync(notification.identifier)));
+    if (!preferences.enabled || !preferences.fixedCostEnabled || await this.getPermissionState() !== 'granted') return;
 
-    for (const group of buildFixedCostReminderGroups({ schedules, occurrences })) {
+    for (const group of buildFixedCostReminderGroups({ schedules, occurrences, hour: preferences.reminderHour, minute: preferences.reminderMinute })) {
       const itemCount = group.occurrenceIds.length;
+      const onlyOccurrence = itemCount === 1 ? occurrences.find((occurrence) => occurrence.id === group.occurrenceIds[0]) : null;
+      const body = preferences.showLockScreenDetails && onlyOccurrence
+        ? `${onlyOccurrence.scheduleName} · ${formatMoney(onlyOccurrence.estimatedMinor)}`
+        : `มี ${itemCount} รายการที่ต้องตรวจสอบ เปิดแอปเพื่อดูรายละเอียด`;
       await Notifications.scheduleNotificationAsync({
         identifier: `${owner}:${group.id}`,
         content: {
           title: phaseTitle[group.phase],
-          body: `มี ${itemCount} รายการที่ต้องตรวจสอบ เปิดแอปเพื่อดูรายละเอียด`,
+          body,
           data: { owner, href: itemCount === 1 ? `/planning/fixed-costs/${group.occurrenceIds[0]}` : '/planning/fixed-costs' },
         },
         trigger: {

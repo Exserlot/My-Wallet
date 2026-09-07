@@ -23,4 +23,12 @@ describe('web privacy preference', () => {
     await preferenceRepository.setHideFinancialValues(false);
     await expect(preferenceRepository.getHideFinancialValues()).resolves.toBe(false);
   });
+
+  it('remembers notification switches, time, and lock-screen privacy', async () => {
+    const defaults = await preferenceRepository.getNotificationPreferences();
+    expect(defaults).toMatchObject({ reminderHour: 9, reminderMinute: 0, showLockScreenDetails: false });
+    const changed = { ...defaults, budgetEnabled: false, reminderHour: 18, reminderMinute: 30, showLockScreenDetails: true };
+    await preferenceRepository.setNotificationPreferences(changed);
+    await expect(preferenceRepository.getNotificationPreferences()).resolves.toEqual(changed);
+  });
 });

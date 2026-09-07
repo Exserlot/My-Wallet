@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import { fixedCostRepository } from '@/database/fixed-cost-store';
+import { preferenceRepository } from '@/database/preference-store';
 import type { FixedCostOccurrence, FixedCostSchedule } from '@/domain/fixed-costs';
 import { localNotificationService } from '@/services/local-notification-service';
 
@@ -29,7 +30,9 @@ export function useFixedCosts(includeArchived = false) {
       ]);
       setSchedules(nextSchedules);
       setOccurrences(nextOccurrences);
-      void localNotificationService.syncFixedCostReminders(nextSchedules, nextOccurrences).catch(() => undefined);
+      void preferenceRepository.getNotificationPreferences()
+        .then((preferences) => localNotificationService.syncFixedCostReminders(nextSchedules, nextOccurrences, preferences))
+        .catch(() => undefined);
     } catch {
       setError('ไม่สามารถโหลด Fixed Cost ได้');
     } finally {
