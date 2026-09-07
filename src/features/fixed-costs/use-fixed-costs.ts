@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 
 import { fixedCostRepository } from '@/database/fixed-cost-store';
 import type { FixedCostOccurrence, FixedCostSchedule } from '@/domain/fixed-costs';
+import { localNotificationService } from '@/services/local-notification-service';
 
 function occurrenceRange() {
   const now = new Date();
@@ -28,6 +29,7 @@ export function useFixedCosts(includeArchived = false) {
       ]);
       setSchedules(nextSchedules);
       setOccurrences(nextOccurrences);
+      void localNotificationService.syncFixedCostReminders(nextSchedules, nextOccurrences).catch(() => undefined);
     } catch {
       setError('ไม่สามารถโหลด Fixed Cost ได้');
     } finally {

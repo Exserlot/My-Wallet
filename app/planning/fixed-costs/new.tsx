@@ -8,6 +8,7 @@ import { clampedDueDate, fixedCostFrequencies, frequencyLabel, type FixedCostFre
 import { parseMoneyInput } from '@/domain/wallets';
 import { useExpenseCategories } from '@/features/expense-categories/use-expense-categories';
 import { useWallets } from '@/features/wallets/use-wallets';
+import { localNotificationService } from '@/services/local-notification-service';
 
 type PastDueStrategy = 'include-overdue' | 'next-cycle';
 
@@ -36,6 +37,7 @@ export default function NewFixedCostScreen() {
   const [payee, setPayee] = useState('');
   const [note, setNote] = useState('');
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [showReminderPermissionInfo, setShowReminderPermissionInfo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export default function NewFixedCostScreen() {
   const parsedDueDay = Number(dueDay);
   const dueHasPassed = Number.isInteger(parsedDueDay) && parsedDueDay >= 1 && parsedDueDay < new Date().getDate();
 
-  async function save() {
+  async function save(permissionChoice?: 'request' | 'skip') {
     const estimatedMinor = parseMoneyInput(amount);
     const parsedInterval = Number(intervalMonths);
     if (!name.trim() || name.trim().length > 80) return setError('กรุณากรอกชื่อ 1–80 ตัวอักษร');
@@ -53,6 +55,16 @@ export default function NewFixedCostScreen() {
     if (!selectedWalletId) return setError('กรุณาสร้างและเลือกกระเป๋าที่จะจ่าย');
     if (!Number.isInteger(parsedDueDay) || parsedDueDay < 1 || parsedDueDay > 31) return setError('วันครบกำหนดต้องอยู่ระหว่าง 1–31');
     if (frequency === 'every-n-months' && (!Number.isInteger(parsedInterval) || parsedInterval < 2 || parsedInterval > 120)) return setError('ความถี่ต้องอยู่ระหว่าง 2–120 เดือน');
+    let savedRemindersEnabled = remindersEnabled;
+    if (remindersEnabled && !permissionChoice) {
+      const permission = await localNotificationService.getPermissionState();
+      if (permission === 'undetermined') {
+        setShowReminderPermissionInfo(true);
+        return;
+      }
+    }
+    if (permissionChoice === 'request') await localNotificationService.requestPermission();
+    if (permissionChoice === 'skip') savedRemindersEnabled = false;
     try {
       setSaving(true);
       setError(null);
@@ -67,7 +79,7 @@ export default function NewFixedCostScreen() {
         firstDueAt: firstDueAt(frequency, parsedInterval, parsedDueDay, pastDueStrategy),
         payee: payee || null,
         note: note || null,
-        remindersEnabled,
+        remindersEnabled: savedRemindersEnabled,
       });
       router.replace('/planning/fixed-costs');
     } catch {
@@ -115,7 +127,18 @@ export default function NewFixedCostScreen() {
 
           <View style={styles.field}><Text style={styles.label}>ผู้รับเงิน (ไม่บังคับ)</Text><TextInput accessibilityLabel="ผู้รับเงิน" maxLength={80} onChangeText={setPayee} style={styles.input} value={payee} /></View>
           <View style={styles.field}><Text style={styles.label}>หมายเหตุ (ไม่บังคับ)</Text><TextInput accessibilityLabel="หมายเหตุ" maxLength={160} onChangeText={setNote} style={styles.input} value={note} /></View>
-          <Pressable accessibilityRole="switch" accessibilityState={{ checked: remindersEnabled }} onPress={() => setRemindersEnabled((value) => !value)} style={styles.switchRow}><Text style={styles.label}>เตือน 3 วันก่อน วันครบกำหนด และเมื่อเกินกำหนด</Text><Text style={styles.switchText}>{remindersEnabled ? 'เปิด' : 'ปิด'}</Text></Pressable>
+          <Pressable accessibilityRole="switch" accessibilityState={{ checked: remindersEnabled }} onPress={() => { setRemindersEnabled((value) => !value); setShowReminderPermissionInfo(false); }} style={styles.switchRow}><Text style={styles.label}>เตือน 3 วันก่อน วันครบกำหนด และเมื่อเกินกำหนด</Text><Text style={styles.switchText}>{remindersEnabled ? 'เปิด' : 'ปิด'}</Text></Pressable>
+
+          {showReminderPermissionInfo ? (
+            <View style={styles.permissionCard}>
+              <Text style={styles.permissionTitle}>ให้ My Wallet ช่วยเตือนวันจ่ายไหม?</Text>
+              <Text style={styles.permissionText}>แอปจะเตือนในเครื่องเท่านั้น ไม่ส่งข้อมูลการเงินออกไป และข้อความบนหน้าจอล็อกจะซ่อนชื่อกับยอดเงิน</Text>
+              <View style={styles.permissionActions}>
+                <Pressable accessibilityRole="button" onPress={() => void save('skip')} style={styles.laterButton}><Text style={styles.laterText}>ไว้ทีหลัง</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={() => void save('request')} style={styles.allowButton}><Text style={styles.allowText}>เปิดการแจ้งเตือน</Text></Pressable>
+              </View>
+            </View>
+          ) : null}
 
           {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
           <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={({ pressed }) => [styles.saveButton, (pressed || saving) && styles.pressed]}><Text style={styles.saveText}>{saving ? 'กำลังบันทึก…' : 'บันทึก Fixed Cost'}</Text></Pressable>
@@ -143,6 +166,14 @@ const styles = StyleSheet.create({
   pastDueCard: { padding: 14, gap: 10, borderRadius: 13, backgroundColor: '#FFF0DC' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: 14, borderRadius: 13, backgroundColor: '#ECEFE8' },
   switchText: { color: '#176B48', fontWeight: '800' },
+  permissionCard: { padding: 15, gap: 8, borderWidth: 1, borderColor: '#D9B984', borderRadius: 14, backgroundColor: '#FFF8E9' },
+  permissionTitle: { color: '#6E3C13', fontSize: 16, fontWeight: '800' },
+  permissionText: { color: '#704C2D', fontSize: 13, lineHeight: 19 },
+  permissionActions: { flexDirection: 'row', gap: 9 },
+  laterButton: { flex: 1, minHeight: 43, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#B8C1B9', borderRadius: 11, backgroundColor: '#FFFFFF' },
+  laterText: { color: '#526158', fontWeight: '700' },
+  allowButton: { flex: 1, minHeight: 43, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#176B48' },
+  allowText: { color: '#FFFFFF', fontWeight: '800' },
   hint: { color: '#66736A', fontSize: 12, lineHeight: 18 },
   error: { color: '#A93D38', lineHeight: 20 },
   saveButton: { minHeight: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#176B48' },
