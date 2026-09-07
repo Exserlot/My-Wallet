@@ -31,4 +31,9 @@ describe('web privacy preference', () => {
     await preferenceRepository.setNotificationPreferences(changed);
     await expect(preferenceRepository.getNotificationPreferences()).resolves.toEqual(changed);
   });
+
+  it('remembers budget threshold levels to prevent repeated notifications', async () => {
+    await preferenceRepository.setBudgetThresholdState({ budget: 'urgent' });
+    await expect(preferenceRepository.getBudgetThresholdState()).resolves.toEqual({ budget: 'urgent' });
+  });
 });

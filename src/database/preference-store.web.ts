@@ -1,8 +1,10 @@
 import type { PreferenceRepository } from './preference-repository';
 import { defaultNotificationPreferences, isValidNotificationPreferences, type NotificationPreferences } from '@/domain/preferences';
+import type { BudgetThresholdState } from '@/domain/budget-thresholds';
 
 const hideFinancialValuesKey = 'my-wallet.preference.hide-financial-values';
 const notificationPreferencesKey = 'my-wallet.preference.notifications';
+const budgetThresholdStateKey = 'my-wallet.preference.budget-thresholds';
 
 export const preferenceRepository: PreferenceRepository = {
   async getHideFinancialValues() {
@@ -31,5 +33,19 @@ export const preferenceRepository: PreferenceRepository = {
     if (!isValidNotificationPreferences(preferences)) throw new Error('Invalid notification preferences');
     if (typeof localStorage === 'undefined') return;
     localStorage.setItem(notificationPreferencesKey, JSON.stringify(preferences));
+  },
+
+  async getBudgetThresholdState() {
+    if (typeof localStorage === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem(budgetThresholdStateKey) ?? '{}') as BudgetThresholdState;
+    } catch {
+      return {};
+    }
+  },
+
+  async setBudgetThresholdState(state) {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(budgetThresholdStateKey, JSON.stringify(state));
   },
 };

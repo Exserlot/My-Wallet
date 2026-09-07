@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import type { FixedCostOccurrence, FixedCostSchedule } from '@/domain/fixed-costs';
 import { buildFixedCostReminderGroups, type FixedCostReminderPhase } from '@/domain/notification-reminders';
 import { defaultNotificationPreferences, type NotificationPreferences } from '@/domain/preferences';
+import type { BudgetThresholdTarget } from '@/domain/budget-thresholds';
 import { formatMoney } from '@/domain/wallets';
 
 const channelId = 'fixed-cost-reminders';
@@ -71,5 +72,16 @@ export const localNotificationService = {
         },
       });
     }
+  },
+
+  async showBudgetExceeded(targets: readonly BudgetThresholdTarget[], preferences: NotificationPreferences = defaultNotificationPreferences) {
+    if (targets.length === 0 || !preferences.enabled || !preferences.budgetEnabled || await this.getPermissionState() !== 'granted') return;
+    const body = preferences.showLockScreenDetails && targets.length === 1
+      ? `${targets[0]!.name} ใช้ ${formatMoney(targets[0]!.spentMinor)} จาก ${formatMoney(targets[0]!.limitMinor)}`
+      : `มี ${targets.length} งบที่ใช้ถึงหรือเกิน 100% เปิดแอปเพื่อดูรายละเอียด`;
+    await Notifications.scheduleNotificationAsync({
+      content: { title: 'งบถึงขีดจำกัดแล้ว', body, data: { owner: 'my-wallet-budget', href: '/planning/budget' } },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1, channelId },
+    });
   },
 };
