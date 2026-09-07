@@ -64,6 +64,14 @@ export const transactionRepository: TransactionRepository = {
       .map(toTransaction);
   },
 
+  async listInRange(start, end) {
+    return readWebDatabase().transactions
+      .filter((transaction) => transaction.kind === 'income' || transaction.kind === 'expense')
+      .filter((transaction) => transaction.occurredAt >= start && transaction.occurredAt < end)
+      .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt) || left.createdAt.localeCompare(right.createdAt))
+      .map(toTransaction);
+  },
+
   async updateExpenseCategory(id, categoryId) {
     const database = readWebDatabase();
     if (categoryId && !database.expenseCategories.some((category) => category.id === categoryId && category.archivedAt === null)) {

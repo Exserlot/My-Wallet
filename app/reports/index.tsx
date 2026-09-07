@@ -1,0 +1,144 @@
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { buildCashFlowSeries, buildExpenseCategoryReport, type ReportPeriod } from '@/domain/reports';
+import { formatMoney } from '@/domain/wallets';
+import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';
+import { useReportData } from '@/features/reports/use-report-data';
+
+const periodOptions: readonly Readonly<{ id: ReportPeriod; label: string }>[] = [
+  { id: 'current-month', label: 'เดือนนี้' },
+  { id: 'previous-month', label: 'เดือนก่อน' },
+  { id: 'three-months', label: '3 เดือน' },
+];
+
+function Bar({ amountMinor, maximumMinor, tone }: Readonly<{ amountMinor: number; maximumMinor: number; tone: 'income' | 'expense' | 'budget' }>) {
+  const width = maximumMinor > 0 ? Math.max(2, Math.round(amountMinor / maximumMinor * 100)) : 0;
+  return <View style={styles.barTrack}><View style={[styles.barFill, styles[`${tone}Bar`], { width: `${width}%` }]} /></View>;
+}
+
+export default function ReportsScreen() {
+  const [period, setPeriod] = useState<ReportPeriod>('current-month');
+  const { transactions, range, loading, error } = useReportData(period);
+  const { budget } = useMonthlyBudget();
+  const categories = useMemo(() => buildExpenseCategoryReport(transactions), [transactions]);
+  const cashFlow = useMemo(() => buildCashFlowSeries(transactions, range), [range, transactions]);
+  const incomeMinor = transactions.filter((item) => item.kind === 'income').reduce((sum, item) => sum + item.amount.amountMinor, 0);
+  const expenseMinor = transactions.filter((item) => item.kind === 'expense').reduce((sum, item) => sum + item.amount.amountMinor, 0);
+  const categoryMaximum = Math.max(0, ...categories.map((item) => item.amountMinor));
+  const cashFlowMaximum = Math.max(0, ...cashFlow.flatMap((item) => [item.incomeMinor, item.expenseMinor]));
+
+  return (
+    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.periodPicker}>
+          {periodOptions.map((option) => (
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ checked: period === option.id }}
+              key={option.id}
+              onPress={() => setPeriod(option.id)}
+              style={[styles.periodButton, period === option.id && styles.periodButtonActive]}
+            >
+              <Text style={[styles.periodText, period === option.id && styles.periodTextActive]}>{option.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {loading ? <Text style={styles.muted}>กำลังคำนวณรายงาน…</Text> : null}
+        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryItem}><Text style={styles.summaryLabel}>รายรับ</Text><Text style={styles.incomeText}>{formatMoney(incomeMinor)}</Text></View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}><Text style={styles.summaryLabel}>รายจ่าย</Text><Text style={styles.expenseText}>{formatMoney(expenseMinor)}</Text></View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}><Text style={styles.summaryLabel}>สุทธิ</Text><Text style={styles.summaryValue}>{formatMoney(incomeMinor - expenseMinor)}</Text></View>
+        </View>
+
+        <View>
+          <Text style={styles.sectionTitle}>รายจ่ายตามหมวด</Text>
+          <Text style={styles.sectionHint}>เรียงจากหมวดที่ใช้มากที่สุด</Text>
+        </View>
+        {!loading && categories.length === 0 ? <Text style={styles.empty}>ยังไม่มีรายจ่ายในช่วงนี้</Text> : null}
+        {categories.map((category, index) => (
+          <View key={category.id} style={styles.reportRow}>
+            <View style={styles.rowHeader}>
+              <Text style={styles.rowTitle}>{index + 1}. {category.name}</Text>
+              <Text style={styles.rowAmount}>{formatMoney(category.amountMinor)} · {category.percent}%</Text>
+            </View>
+            <Bar amountMinor={category.amountMinor} maximumMinor={categoryMaximum} tone="expense" />
+          </View>
+        ))}
+
+        <View>
+          <Text style={styles.sectionTitle}>รายรับเทียบรายจ่ายตามเวลา</Text>
+          <Text style={styles.sectionHint}>สีเขียวคือรายรับ สีแดงคือรายจ่าย พร้อมตัวเลขกำกับ</Text>
+        </View>
+        {cashFlow.filter((item) => item.incomeMinor > 0 || item.expenseMinor > 0).map((bucket) => (
+          <View key={bucket.key} style={styles.timelineRow}>
+            <Text style={styles.timelineLabel}>{new Intl.DateTimeFormat('th-TH', range.grouping === 'month' ? { month: 'short', year: '2-digit' } : { day: 'numeric', month: 'short' }).format(new Date(bucket.startAt))}</Text>
+            <View style={styles.timelineBars}>
+              <View><Text style={styles.miniLabel}>รับ {formatMoney(bucket.incomeMinor)}</Text><Bar amountMinor={bucket.incomeMinor} maximumMinor={cashFlowMaximum} tone="income" /></View>
+              <View><Text style={styles.miniLabel}>จ่าย {formatMoney(bucket.expenseMinor)}</Text><Bar amountMinor={bucket.expenseMinor} maximumMinor={cashFlowMaximum} tone="expense" /></View>
+            </View>
+          </View>
+        ))}
+        {!loading && cashFlow.every((item) => item.incomeMinor === 0 && item.expenseMinor === 0) ? <Text style={styles.empty}>ยังไม่มีเงินเข้าออกในช่วงนี้</Text> : null}
+
+        <View>
+          <Text style={styles.sectionTitle}>งบเทียบยอดใช้จริง</Text>
+          <Text style={styles.sectionHint}>{period === 'current-month' ? 'แสดงแผนงบเดือนปัจจุบัน' : 'เลือก “เดือนนี้” เพื่อดูแผนงบปัจจุบัน'}</Text>
+        </View>
+        {period === 'current-month' && budget ? budget.allocations.map((allocation) => (
+          <View key={allocation.categoryId} style={styles.reportRow}>
+            <View style={styles.rowHeader}>
+              <Text style={styles.rowTitle}>{allocation.categoryName}</Text>
+              <Text style={styles.rowAmount}>{formatMoney(allocation.spentMinor)} / {formatMoney(allocation.allocatedMinor)}</Text>
+            </View>
+            <Bar amountMinor={Math.min(allocation.spentMinor, allocation.allocatedMinor)} maximumMinor={allocation.allocatedMinor} tone="budget" />
+            <Text style={styles.remainingText}>เหลือ {formatMoney(allocation.allocatedMinor - allocation.spentMinor)}</Text>
+          </View>
+        )) : null}
+        {period === 'current-month' && !budget ? <Text style={styles.empty}>ยังไม่ได้ตั้งงบเดือนนี้</Text> : null}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#F4F5EF' },
+  container: { width: '100%', maxWidth: 760, alignSelf: 'center', padding: 20, gap: 14 },
+  periodPicker: { flexDirection: 'row', gap: 7, padding: 4, borderRadius: 14, backgroundColor: '#E7EAE3' },
+  periodButton: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 11 },
+  periodButtonActive: { backgroundColor: '#173F2B' },
+  periodText: { color: '#526158', fontSize: 13, fontWeight: '700' },
+  periodTextActive: { color: '#FFFFFF' },
+  summaryCard: { flexDirection: 'row', alignItems: 'stretch', padding: 16, borderRadius: 17, backgroundColor: '#FFFEF9' },
+  summaryItem: { flex: 1, gap: 4 },
+  summaryDivider: { width: 1, marginHorizontal: 10, backgroundColor: '#DFE4DA' },
+  summaryLabel: { color: '#66736A', fontSize: 11 },
+  summaryValue: { color: '#17211B', fontSize: 15, fontWeight: '800' },
+  incomeText: { color: '#176B48', fontSize: 15, fontWeight: '800' },
+  expenseText: { color: '#A93D38', fontSize: 15, fontWeight: '800' },
+  sectionTitle: { marginTop: 5, color: '#17211B', fontSize: 19, fontWeight: '800' },
+  sectionHint: { marginTop: 3, color: '#66736A', fontSize: 12 },
+  reportRow: { gap: 8, padding: 14, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 14, backgroundColor: '#FFFEF9' },
+  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  rowTitle: { flex: 1, color: '#17211B', fontWeight: '700' },
+  rowAmount: { color: '#526158', fontSize: 12, fontWeight: '700' },
+  barTrack: { height: 8, overflow: 'hidden', borderRadius: 999, backgroundColor: '#E7EAE3' },
+  barFill: { height: '100%', borderRadius: 999 },
+  incomeBar: { backgroundColor: '#2C8A62' },
+  expenseBar: { backgroundColor: '#C65E55' },
+  budgetBar: { backgroundColor: '#B86B25' },
+  timelineRow: { flexDirection: 'row', gap: 12, padding: 13, borderRadius: 14, backgroundColor: '#FFFEF9' },
+  timelineLabel: { width: 66, color: '#17211B', fontSize: 12, fontWeight: '800' },
+  timelineBars: { flex: 1, gap: 8 },
+  miniLabel: { marginBottom: 3, color: '#66736A', fontSize: 11 },
+  remainingText: { color: '#66736A', fontSize: 11 },
+  empty: { padding: 16, color: '#66736A', textAlign: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#B8C1B9', borderRadius: 14 },
+  muted: { color: '#66736A', fontSize: 12 },
+  error: { color: '#A93D38' },
+});

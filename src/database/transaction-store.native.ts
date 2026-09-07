@@ -131,6 +131,34 @@ export const transactionRepository: TransactionRepository = {
     return rows.map(toTransaction);
   },
 
+  async listInRange(start, end) {
+    const database = await getDatabase();
+    const rows = await database.getAllAsync<TransactionRow>(
+      `SELECT
+        transactions.id,
+        transactions.wallet_id,
+        wallets.name AS wallet_name,
+        transactions.kind,
+        transactions.amount_minor,
+        transactions.currency,
+        transactions.occurred_at,
+        transactions.category_id,
+        expense_categories.name AS category_name,
+        transactions.note,
+        transactions.source
+      FROM transactions
+      JOIN wallets ON wallets.id = transactions.wallet_id
+      LEFT JOIN expense_categories ON expense_categories.id = transactions.category_id
+      WHERE transactions.kind IN ('INCOME', 'EXPENSE')
+        AND transactions.occurred_at >= ?
+        AND transactions.occurred_at < ?
+      ORDER BY transactions.occurred_at, transactions.created_at`,
+      start,
+      end,
+    );
+    return rows.map(toTransaction);
+  },
+
   async updateExpenseCategory(id, categoryId) {
     const database = await getDatabase();
     if (categoryId) {

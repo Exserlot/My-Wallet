@@ -14,6 +14,7 @@ const quickActions: { label: string; route?: Href }[] = [
   { label: 'เพิ่มรายจ่าย', route: { pathname: '/transactions/new', params: { kind: 'expense' } } },
   { label: 'ดูรายการ', route: '/transactions' },
   { label: 'วางแผนงบ', route: '/planning' },
+  { label: 'ดูรายงาน', route: '/reports' as Href },
   { label: 'จัดการกระเป๋า', route: '/wallets' },
 ];
 
