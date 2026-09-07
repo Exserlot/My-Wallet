@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Transaction } from './transactions';
-import { buildCashFlowSeries, buildExpenseCategoryReport, reportRange } from './reports';
+import { buildCashFlowSeries, buildExpenseCategoryReport, customReportRange, reportRange } from './reports';
 
 function transaction(kind: 'income' | 'expense', amountMinor: number, categoryId: string | null, categoryName: string | null, occurredAt = '2026-09-08T12:00:00+07:00'): Transaction {
   return { id: `${kind}-${amountMinor}-${categoryId}`, walletId: 'wallet', walletName: 'หลัก', kind, categoryId, categoryName, amount: { amountMinor, currency: 'THB' }, occurredAt, note: null, source: 'manual' };
@@ -31,5 +31,13 @@ describe('cash flow report', () => {
     expect(series.map((bucket) => bucket.key)).toEqual(['2026-07', '2026-08', '2026-09']);
     expect(series[2]?.expenseMinor).toBe(1200);
     expect(series[0]?.incomeMinor).toBe(0);
+  });
+
+  it('builds an inclusive custom date range and rejects invalid dates', () => {
+    const range = customReportRange('2026-08-15', '2026-09-08');
+    expect(range).toMatchObject({ grouping: 'day' });
+    expect(new Date(range!.end).getDate()).toBe(9);
+    expect(customReportRange('2026-09-10', '2026-09-08')).toBeNull();
+    expect(customReportRange('2026-02-30', '2026-03-01')).toBeNull();
   });
 });

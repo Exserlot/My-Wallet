@@ -38,6 +38,26 @@ export function reportRange(period: ReportPeriod, now = new Date()): ReportRange
   return { start: startOfMonth(now, 0).toISOString(), end: startOfMonth(now, 1).toISOString(), grouping: 'day' };
 }
 
+export function customReportRange(startInput: string, endInput: string): ReportRange | null {
+  const matchStart = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startInput.trim());
+  const matchEnd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(endInput.trim());
+  if (!matchStart || !matchEnd) return null;
+  const start = new Date(Number(matchStart[1]), Number(matchStart[2]) - 1, Number(matchStart[3]));
+  const lastDay = new Date(Number(matchEnd[1]), Number(matchEnd[2]) - 1, Number(matchEnd[3]));
+  if (
+    start.getFullYear() !== Number(matchStart[1])
+    || start.getMonth() !== Number(matchStart[2]) - 1
+    || start.getDate() !== Number(matchStart[3])
+    || lastDay.getFullYear() !== Number(matchEnd[1])
+    || lastDay.getMonth() !== Number(matchEnd[2]) - 1
+    || lastDay.getDate() !== Number(matchEnd[3])
+    || lastDay < start
+  ) return null;
+  const end = new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate() + 1);
+  const dayCount = (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString(), grouping: dayCount > 62 ? 'month' : 'day' };
+}
+
 export function buildExpenseCategoryReport(transactions: readonly Transaction[], visibleCount = 5): ExpenseCategoryReportItem[] {
   const totals = new Map<string | null, { name: string; amountMinor: number }>();
   for (const transaction of transactions) {
