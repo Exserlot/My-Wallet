@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +29,18 @@ export default function ReportsScreen() {
   const expenseMinor = transactions.filter((item) => item.kind === 'expense').reduce((sum, item) => sum + item.amount.amountMinor, 0);
   const categoryMaximum = Math.max(0, ...categories.map((item) => item.amountMinor));
   const cashFlowMaximum = Math.max(0, ...cashFlow.flatMap((item) => [item.incomeMinor, item.expenseMinor]));
+
+  function openTransactions(start: string, end: string, categoryIds?: readonly (string | null)[], categoryName?: string) {
+    router.push({
+      pathname: '/transactions',
+      params: {
+        start,
+        end,
+        categoryIds: categoryIds?.map((id) => id ?? '__uncategorized__').join(','),
+        categoryName,
+      },
+    });
+  }
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -63,13 +76,14 @@ export default function ReportsScreen() {
         </View>
         {!loading && categories.length === 0 ? <Text style={styles.empty}>ยังไม่มีรายจ่ายในช่วงนี้</Text> : null}
         {categories.map((category, index) => (
-          <View key={category.id} style={styles.reportRow}>
+          <Pressable accessibilityRole="button" key={category.id} onPress={() => openTransactions(range.start, range.end, category.categoryIds, category.name)} style={({ pressed }) => [styles.reportRow, pressed && styles.pressed]}>
             <View style={styles.rowHeader}>
               <Text style={styles.rowTitle}>{index + 1}. {category.name}</Text>
               <Text style={styles.rowAmount}>{formatMoney(category.amountMinor)} · {category.percent}%</Text>
             </View>
             <Bar amountMinor={category.amountMinor} maximumMinor={categoryMaximum} tone="expense" />
-          </View>
+            <Text style={styles.openHint}>กดเพื่อดูรายการ ›</Text>
+          </Pressable>
         ))}
 
         <View>
@@ -77,13 +91,13 @@ export default function ReportsScreen() {
           <Text style={styles.sectionHint}>สีเขียวคือรายรับ สีแดงคือรายจ่าย พร้อมตัวเลขกำกับ</Text>
         </View>
         {cashFlow.filter((item) => item.incomeMinor > 0 || item.expenseMinor > 0).map((bucket) => (
-          <View key={bucket.key} style={styles.timelineRow}>
+          <Pressable accessibilityRole="button" key={bucket.key} onPress={() => openTransactions(bucket.startAt, bucket.endAt)} style={({ pressed }) => [styles.timelineRow, pressed && styles.pressed]}>
             <Text style={styles.timelineLabel}>{new Intl.DateTimeFormat('th-TH', range.grouping === 'month' ? { month: 'short', year: '2-digit' } : { day: 'numeric', month: 'short' }).format(new Date(bucket.startAt))}</Text>
             <View style={styles.timelineBars}>
               <View><Text style={styles.miniLabel}>รับ {formatMoney(bucket.incomeMinor)}</Text><Bar amountMinor={bucket.incomeMinor} maximumMinor={cashFlowMaximum} tone="income" /></View>
               <View><Text style={styles.miniLabel}>จ่าย {formatMoney(bucket.expenseMinor)}</Text><Bar amountMinor={bucket.expenseMinor} maximumMinor={cashFlowMaximum} tone="expense" /></View>
             </View>
-          </View>
+          </Pressable>
         ))}
         {!loading && cashFlow.every((item) => item.incomeMinor === 0 && item.expenseMinor === 0) ? <Text style={styles.empty}>ยังไม่มีเงินเข้าออกในช่วงนี้</Text> : null}
 
@@ -138,6 +152,8 @@ const styles = StyleSheet.create({
   timelineBars: { flex: 1, gap: 8 },
   miniLabel: { marginBottom: 3, color: '#66736A', fontSize: 11 },
   remainingText: { color: '#66736A', fontSize: 11 },
+  openHint: { color: '#176B48', fontSize: 11, fontWeight: '700', textAlign: 'right' },
+  pressed: { opacity: 0.7 },
   empty: { padding: 16, color: '#66736A', textAlign: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#B8C1B9', borderRadius: 14 },
   muted: { color: '#66736A', fontSize: 12 },
   error: { color: '#A93D38' },

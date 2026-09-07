@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,22 +7,48 @@ import { formatMoney } from '@/domain/wallets';
 import { useTransactions } from '@/features/transactions/use-transactions';
 
 export default function TransactionListScreen() {
+  const params = useLocalSearchParams<{ start?: string; end?: string; categoryIds?: string; categoryName?: string }>();
+  const reportFilter = useMemo(() => {
+    if (!params.start || !params.end) return undefined;
+    return {
+      start: params.start,
+      end: params.end,
+      categoryIds: params.categoryIds
+        ? params.categoryIds.split(',').map((id) => id === '__uncategorized__' ? null : id)
+        : undefined,
+    };
+  }, [params.categoryIds, params.end, params.start]);
   const [uncategorizedOnly, setUncategorizedOnly] = useState(false);
-  const { transactions, totals, loading, error } = useTransactions(20, uncategorizedOnly);
+  const { transactions, totals, loading, error } = useTransactions(20, uncategorizedOnly, reportFilter);
+  const periodLabel = reportFilter
+    ? `${new Date(reportFilter.start).toLocaleDateString('th-TH')} – ${new Date(new Date(reportFilter.end).getTime() - 1).toLocaleDateString('th-TH')}`
+    : null;
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.summaryRow}>
           <View style={[styles.summaryCard, styles.incomeCard]}>
-            <Text style={styles.summaryLabel}>รายรับเดือนนี้</Text>
+            <Text style={styles.summaryLabel}>{reportFilter ? 'รายรับช่วงที่เลือก' : 'รายรับเดือนนี้'}</Text>
             <Text style={styles.summaryValue}>{formatMoney(totals.incomeMinor)}</Text>
           </View>
           <View style={[styles.summaryCard, styles.expenseCard]}>
-            <Text style={styles.summaryLabel}>รายจ่ายเดือนนี้</Text>
+            <Text style={styles.summaryLabel}>{reportFilter ? 'รายจ่ายช่วงที่เลือก' : 'รายจ่ายเดือนนี้'}</Text>
             <Text style={styles.summaryValue}>{formatMoney(totals.expenseMinor)}</Text>
           </View>
         </View>
+
+        {reportFilter ? (
+          <View style={styles.reportFilterCard}>
+            <View style={styles.reportFilterBody}>
+              <Text style={styles.reportFilterTitle}>กำลังดูจากรายงาน{params.categoryName ? ` · ${params.categoryName}` : ''}</Text>
+              <Text style={styles.reportFilterText}>{periodLabel}</Text>
+            </View>
+            <Pressable accessibilityRole="button" onPress={() => router.replace('/transactions')}>
+              <Text style={styles.clearFilter}>ล้างตัวกรอง</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={styles.actionRow}>
           <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/transactions/new', params: { kind: 'income' } })} style={[styles.actionButton, styles.incomeButton]}>
@@ -36,7 +62,7 @@ export default function TransactionListScreen() {
           <Text style={styles.slipButtonText}>▣ นำเข้าสลิปหลายรูป</Text>
         </Pressable>
 
-        <View style={styles.listToolbar}>
+        {!reportFilter ? <View style={styles.listToolbar}>
           <View style={styles.filterRow}>
             <Pressable accessibilityRole="radio" accessibilityState={{ checked: !uncategorizedOnly }} onPress={() => setUncategorizedOnly(false)} style={[styles.filterButton, !uncategorizedOnly && styles.filterActive]}>
               <Text style={[styles.filterText, !uncategorizedOnly && styles.filterTextActive]}>ทั้งหมด</Text>
@@ -48,7 +74,7 @@ export default function TransactionListScreen() {
           <Pressable accessibilityRole="button" onPress={() => router.push('/categories')}>
             <Text style={styles.categoryLink}>จัดการหมวด</Text>
           </Pressable>
-        </View>
+        </View> : null}
 
         {loading ? <ActivityIndicator color="#176B48" /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -104,6 +130,11 @@ const styles = StyleSheet.create({
   expenseButtonText: { color: '#FFFFFF', fontWeight: '800' },
   slipButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#176B48', borderRadius: 13, backgroundColor: '#F4FBF6' },
   slipButtonText: { color: '#176B48', fontWeight: '800' },
+  reportFilterCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 13, backgroundColor: '#FFF0DC' },
+  reportFilterBody: { flex: 1 },
+  reportFilterTitle: { color: '#6E3C13', fontWeight: '800' },
+  reportFilterText: { marginTop: 3, color: '#704C2D', fontSize: 12 },
+  clearFilter: { color: '#176B48', fontSize: 12, fontWeight: '800' },
   listToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   filterButton: { paddingHorizontal: 11, paddingVertical: 7, borderWidth: 1, borderColor: '#C9D0C9', borderRadius: 999, backgroundColor: '#FFFEF9' },

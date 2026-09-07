@@ -19,6 +19,7 @@ export type ExpenseCategoryReportItem = Readonly<{
 export type CashFlowBucket = Readonly<{
   key: string;
   startAt: string;
+  endAt: string;
   incomeMinor: number;
   expenseMinor: number;
 }>;
@@ -97,6 +98,7 @@ export function buildCashFlowSeries(transactions: readonly Transaction[], range:
   return [...buckets.entries()].map(([key, totals]) => {
     const parts = key.split('-').map(Number);
     const startAt = new Date(parts[0]!, parts[1]! - 1, parts[2] ?? 1).toISOString();
-    return { key, startAt, ...totals };
+    const endAt = addBucket(new Date(startAt), range.grouping).toISOString();
+    return { key, startAt, endAt, ...totals };
   });
 }
