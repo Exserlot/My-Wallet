@@ -2,8 +2,10 @@ import { router, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { buildDashboardAttentionItems, type DashboardAttentionItem } from '@/domain/attention-items';
 import { formatMoney } from '@/domain/wallets';
 import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';
+import { useFixedCosts } from '@/features/fixed-costs/use-fixed-costs';
 import { useTransactions } from '@/features/transactions/use-transactions';
 import { useWallets } from '@/features/wallets/use-wallets';
 
@@ -18,6 +20,7 @@ const quickActions: { label: string; route?: Href }[] = [
 export default function HomeScreen() {
   const { wallets } = useWallets();
   const { budget } = useMonthlyBudget();
+  const { occurrences } = useFixedCosts();
   const { transactions, totals } = useTransactions(5);
   const totalMinor = wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
   const monthLabel = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date());
@@ -25,6 +28,15 @@ export default function HomeScreen() {
     { label: 'รายรับเดือนนี้', value: formatMoney(totals.incomeMinor) },
     { label: 'รายจ่ายเดือนนี้', value: formatMoney(totals.expenseMinor) },
   ];
+  const attentionItems = buildDashboardAttentionItems({ budget, occurrences });
+
+  function openAttentionItem(item: DashboardAttentionItem) {
+    if (item.kind === 'fixed-cost') {
+      router.push({ pathname: '/planning/fixed-costs/[id]', params: { id: item.occurrence.id } });
+      return;
+    }
+    router.push('/planning/budget');
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -69,6 +81,48 @@ export default function HomeScreen() {
             <Text style={styles.emptyBudgetText}>ยังไม่ได้ตั้งงบเดือนนี้ · กดเพื่อเริ่มวางแผน</Text>
           </Pressable>
         )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>เรื่องที่ต้องจัดการวันนี้</Text>
+          {attentionItems.length > 0 ? <Text style={styles.attentionCount}>{attentionItems.length} เรื่อง</Text> : null}
+        </View>
+        {attentionItems.length === 0 ? (
+          <View style={styles.clearCard}>
+            <Text style={styles.clearTitle}>ยังไม่มีเรื่องเร่งด่วน</Text>
+            <Text style={styles.clearText}>ระบบจะบอกเมื่อ Fixed Cost ใกล้ถึงกำหนด หรืองบใช้ถึง 80%</Text>
+          </View>
+        ) : attentionItems.map((item) => (
+          <Pressable
+            accessibilityRole="button"
+            key={item.id}
+            onPress={() => openAttentionItem(item)}
+            style={({ pressed }) => [styles.attentionCard, item.level === 'urgent' && styles.attentionUrgent, pressed && styles.actionPressed]}
+          >
+            <View style={styles.attentionBody}>
+              <Text style={[styles.attentionLabel, item.level === 'urgent' && styles.attentionLabelUrgent]}>
+                {item.level === 'urgent' ? 'ต้องจัดการ' : 'ใกล้ถึงเกณฑ์'}
+              </Text>
+              {item.kind === 'fixed-cost' ? (
+                <>
+                  <Text style={styles.attentionTitle}>{item.occurrence.scheduleName}</Text>
+                  <Text style={styles.attentionDetail}>
+                    {item.daysUntilDue < 0
+                      ? `เกินกำหนด ${Math.abs(item.daysUntilDue)} วัน`
+                      : item.daysUntilDue === 0
+                        ? 'ครบกำหนดวันนี้'
+                        : `ครบกำหนดใน ${item.daysUntilDue} วัน`} · {formatMoney(item.occurrence.estimatedMinor)}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.attentionTitle}>{item.kind === 'monthly-budget' ? 'งบรวมเดือนนี้' : `งบ${item.categoryName}`}</Text>
+                  <Text style={styles.attentionDetail}>ใช้แล้ว {item.usagePercent}% · {formatMoney(item.spentMinor)} จาก {formatMoney(item.limitMinor)}</Text>
+                </>
+              )}
+            </View>
+            <Text style={styles.attentionOpen}>เปิด ›</Text>
+          </Pressable>
+        ))}
 
         <Text style={styles.sectionTitle}>ทำรายการ</Text>
         <View style={styles.actionGrid}>
@@ -140,6 +194,18 @@ const styles = StyleSheet.create({
   budgetMeta: { marginTop: 5, color: '#526158', fontSize: 12 },
   emptyBudget: { padding: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: '#176B48', borderRadius: 14 },
   emptyBudgetText: { color: '#176B48', textAlign: 'center', fontWeight: '700' },
+  attentionCount: { color: '#8A4C17', fontSize: 12, fontWeight: '800' },
+  clearCard: { padding: 15, borderWidth: 1, borderColor: '#CFE0D3', borderRadius: 14, backgroundColor: '#F6FBF7' },
+  clearTitle: { color: '#176B48', fontWeight: '800' },
+  clearText: { marginTop: 4, color: '#66736A', fontSize: 12, lineHeight: 18 },
+  attentionCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderWidth: 1, borderColor: '#E1BE89', borderRadius: 15, backgroundColor: '#FFF8E9' },
+  attentionUrgent: { borderColor: '#D88B84', backgroundColor: '#FFF1EF' },
+  attentionBody: { flex: 1 },
+  attentionLabel: { color: '#8A4C17', fontSize: 11, fontWeight: '800' },
+  attentionLabelUrgent: { color: '#A93D38' },
+  attentionTitle: { marginTop: 3, color: '#17211B', fontSize: 16, fontWeight: '800' },
+  attentionDetail: { marginTop: 3, color: '#66736A', fontSize: 12, lineHeight: 18 },
+  attentionOpen: { color: '#176B48', fontSize: 13, fontWeight: '800' },
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionButton: { width: '48%', minWidth: 150, flexGrow: 1, padding: 16, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 16, backgroundColor: '#FFFEF9' },
   actionPressed: { opacity: 0.7 },
