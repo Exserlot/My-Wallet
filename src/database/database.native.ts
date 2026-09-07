@@ -158,6 +158,17 @@ async function migrate(database: SQLiteDatabase) {
       );
       PRAGMA user_version = 7;
     `);
+    currentVersion = 7;
+  }
+
+  if (currentVersion === 7) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS app_preferences (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+      PRAGMA user_version = 8;
+    `);
   }
 }
 

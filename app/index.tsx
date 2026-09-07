@@ -6,6 +6,7 @@ import { buildDashboardAttentionItems, type DashboardAttentionItem } from '@/dom
 import { formatMoney } from '@/domain/wallets';
 import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';
 import { useFixedCosts } from '@/features/fixed-costs/use-fixed-costs';
+import { useFinancialPrivacy } from '@/features/preferences/use-financial-privacy';
 import { useTransactions } from '@/features/transactions/use-transactions';
 import { useWallets } from '@/features/wallets/use-wallets';
 
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const { wallets } = useWallets();
   const { budget } = useMonthlyBudget();
   const { occurrences } = useFixedCosts();
+  const { hideFinancialValues, setHideFinancialValues } = useFinancialPrivacy();
   const { transactions, totals } = useTransactions(5);
   const totalMinor = wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
   const monthLabel = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date());
@@ -30,6 +32,7 @@ export default function HomeScreen() {
     { label: 'รายจ่ายเดือนนี้', value: formatMoney(totals.expenseMinor) },
   ];
   const attentionItems = buildDashboardAttentionItems({ budget, occurrences });
+  const privateMoney = (amountMinor: number) => hideFinancialValues ? '••••••' : formatMoney(amountMinor);
 
   function openAttentionItem(item: DashboardAttentionItem) {
     if (item.kind === 'fixed-cost') {
@@ -47,20 +50,25 @@ export default function HomeScreen() {
             <Text style={styles.eyebrow}>{monthLabel}</Text>
             <Text style={styles.title}>ภาพรวมการเงิน</Text>
           </View>
-          <View style={styles.offlineBadge}>
-            <Text style={styles.offlineText}>พร้อมใช้ Offline</Text>
+          <View style={styles.headerActions}>
+            <Pressable accessibilityRole="switch" accessibilityState={{ checked: hideFinancialValues }} onPress={() => void setHideFinancialValues(!hideFinancialValues)} style={styles.privacyButton}>
+              <Text style={styles.privacyText}>{hideFinancialValues ? 'แสดงตัวเลข' : 'ซ่อนตัวเลข'}</Text>
+            </Pressable>
+            <View style={styles.offlineBadge}>
+              <Text style={styles.offlineText}>พร้อมใช้ Offline</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>ยอดรวมทุกกระเป๋า</Text>
-            <Text style={styles.summaryValue}>{formatMoney(totalMinor)}</Text>
+            <Text style={styles.summaryValue}>{privateMoney(totalMinor)}</Text>
           </View>
           {overviewItems.map((item) => (
             <View key={item.label} style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>{item.label}</Text>
-              <Text style={styles.summaryValue}>{item.value}</Text>
+              <Text style={styles.summaryValue}>{hideFinancialValues ? '••••••' : item.value}</Text>
             </View>
           ))}
         </View>
@@ -74,8 +82,8 @@ export default function HomeScreen() {
         {budget ? (
           <View style={[styles.budgetCard, budget.availableAfterReservationsMinor < 0 && styles.budgetOver]}>
             <Text style={styles.budgetLabel}>{budget.availableAfterReservationsMinor < 0 ? 'เกินงบหลังกัน Fixed Cost' : 'พร้อมใช้หลังกัน Fixed Cost'}</Text>
-            <Text style={styles.budgetValue}>{formatMoney(budget.availableAfterReservationsMinor)}</Text>
-            <Text style={styles.budgetMeta}>จ่ายจริง {formatMoney(budget.spentMinor)} · กัน Fixed Cost {formatMoney(budget.reservedFixedCostMinor)} · ยังไม่จัดสรร {formatMoney(budget.unallocatedMinor)}</Text>
+            <Text style={styles.budgetValue}>{privateMoney(budget.availableAfterReservationsMinor)}</Text>
+            <Text style={styles.budgetMeta}>{hideFinancialValues ? 'ซ่อนรายละเอียดการเงินอยู่' : `จ่ายจริง ${formatMoney(budget.spentMinor)} · กัน Fixed Cost ${formatMoney(budget.reservedFixedCostMinor)} · ยังไม่จัดสรร ${formatMoney(budget.unallocatedMinor)}`}</Text>
           </View>
         ) : (
           <Pressable accessibilityRole="button" onPress={() => router.push('/planning/budget')} style={styles.emptyBudget}>
@@ -111,13 +119,13 @@ export default function HomeScreen() {
                       ? `เกินกำหนด ${Math.abs(item.daysUntilDue)} วัน`
                       : item.daysUntilDue === 0
                         ? 'ครบกำหนดวันนี้'
-                        : `ครบกำหนดใน ${item.daysUntilDue} วัน`} · {formatMoney(item.occurrence.estimatedMinor)}
+                        : `ครบกำหนดใน ${item.daysUntilDue} วัน`} · {privateMoney(item.occurrence.estimatedMinor)}
                   </Text>
                 </>
               ) : (
                 <>
                   <Text style={styles.attentionTitle}>{item.kind === 'monthly-budget' ? 'งบรวมเดือนนี้' : `งบ${item.categoryName}`}</Text>
-                  <Text style={styles.attentionDetail}>ใช้แล้ว {item.usagePercent}% · {formatMoney(item.spentMinor)} จาก {formatMoney(item.limitMinor)}</Text>
+                  <Text style={styles.attentionDetail}>{hideFinancialValues ? 'ซ่อนรายละเอียดการใช้งบอยู่' : `ใช้แล้ว ${item.usagePercent}% · ${formatMoney(item.spentMinor)} จาก ${formatMoney(item.limitMinor)}`}</Text>
                 </>
               )}
             </View>
@@ -156,7 +164,7 @@ export default function HomeScreen() {
                 <Text style={styles.transactionWallet}>{transaction.walletName}</Text>
               </View>
               <Text style={[styles.transactionAmount, isIncome ? styles.incomeAmount : styles.expenseAmount]}>
-                {isIncome ? '+' : '−'}{formatMoney(transaction.amount.amountMinor)}
+                {hideFinancialValues ? '••••••' : `${isIncome ? '+' : '−'}${formatMoney(transaction.amount.amountMinor)}`}
               </Text>
             </View>
           );
@@ -177,10 +185,13 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F5EF' },
   container: { width: '100%', maxWidth: 760, alignSelf: 'center', padding: 20, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  headerActions: { alignItems: 'flex-end', gap: 7 },
   eyebrow: { color: '#66736A', fontSize: 14 },
   title: { color: '#17211B', fontSize: 30, fontWeight: '800' },
   offlineBadge: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: '#DCEDDF' },
   offlineText: { color: '#176B48', fontSize: 12, fontWeight: '700' },
+  privacyButton: { paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: '#B8C1B9', borderRadius: 999, backgroundColor: '#FFFEF9' },
+  privacyText: { color: '#526158', fontSize: 12, fontWeight: '700' },
   summaryCard: { padding: 18, gap: 14, borderRadius: 20, backgroundColor: '#173F2B' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
   summaryLabel: { color: '#C9D8CE', fontSize: 15 },
