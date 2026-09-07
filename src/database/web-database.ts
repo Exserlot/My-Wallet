@@ -80,8 +80,14 @@ export type WebPlannedPurchase = Readonly<{
   archivedAt: string | null;
 }>;
 
+export type WebBankSlipImport = Readonly<{
+  fingerprint: string;
+  expenseId: string;
+  importedAt: string;
+}>;
+
 export type WebDatabase = Readonly<{
-  version: 6;
+  version: 7;
   wallets: Wallet[];
   transactions: WebTransaction[];
   expenseCategories: ExpenseCategory[];
@@ -90,6 +96,7 @@ export type WebDatabase = Readonly<{
   fixedCostSchedules: WebFixedCostSchedule[];
   fixedCostOccurrences: WebFixedCostOccurrence[];
   plannedPurchases: WebPlannedPurchase[];
+  bankSlipImports: WebBankSlipImport[];
 }>;
 
 type LegacyDatabase = Readonly<{
@@ -135,7 +142,20 @@ type VersionFiveDatabase = Readonly<{
   fixedCostOccurrences: WebFixedCostOccurrence[];
 }>;
 
-const storageKey = 'my-wallet.database.v6';
+type VersionSixDatabase = Readonly<{
+  version: 6;
+  wallets: Wallet[];
+  transactions: WebTransaction[];
+  expenseCategories: ExpenseCategory[];
+  budgetCycles: WebBudgetCycle[];
+  budgetRevisions: WebBudgetRevision[];
+  fixedCostSchedules: WebFixedCostSchedule[];
+  fixedCostOccurrences: WebFixedCostOccurrence[];
+  plannedPurchases: WebPlannedPurchase[];
+}>;
+
+const storageKey = 'my-wallet.database.v7';
+const versionSixStorageKey = 'my-wallet.database.v6';
 const versionFiveStorageKey = 'my-wallet.database.v5';
 const versionFourStorageKey = 'my-wallet.database.v4';
 const versionThreeStorageKey = 'my-wallet.database.v3';
@@ -143,7 +163,7 @@ const versionTwoStorageKey = 'my-wallet.database.v2';
 const legacyStorageKey = 'my-wallet.database.v1';
 
 const emptyDatabase = (): WebDatabase => ({
-  version: 6,
+  version: 7,
   wallets: [],
   transactions: [],
   expenseCategories: [],
@@ -152,6 +172,7 @@ const emptyDatabase = (): WebDatabase => ({
   fixedCostSchedules: [],
   fixedCostOccurrences: [],
   plannedPurchases: [],
+  bankSlipImports: [],
 });
 
 function migrateLegacyDatabase(): WebDatabase | null {
@@ -162,7 +183,7 @@ function migrateLegacyDatabase(): WebDatabase | null {
     const legacy = JSON.parse(legacyValue) as LegacyDatabase;
     const createdAt = new Date().toISOString();
     return {
-      version: 6,
+      version: 7,
       wallets: legacy.wallets ?? [],
       transactions: (legacy.openingBalances ?? []).map((balance) => ({
         ...balance,
@@ -178,6 +199,7 @@ function migrateLegacyDatabase(): WebDatabase | null {
       fixedCostSchedules: [],
       fixedCostOccurrences: [],
       plannedPurchases: [],
+      bankSlipImports: [],
     };
   } catch {
     return null;
@@ -189,11 +211,22 @@ export function readWebDatabase(): WebDatabase {
   const value = localStorage.getItem(storageKey);
 
   if (!value) {
+    const versionSixValue = localStorage.getItem(versionSixStorageKey);
+    if (versionSixValue) {
+      try {
+        const versionSix = JSON.parse(versionSixValue) as VersionSixDatabase;
+        const migrated: WebDatabase = { ...versionSix, version: 7, bankSlipImports: [] };
+        writeWebDatabase(migrated);
+        return migrated;
+      } catch {
+        // Fall through to an older migration or an empty database.
+      }
+    }
     const versionFiveValue = localStorage.getItem(versionFiveStorageKey);
     if (versionFiveValue) {
       try {
         const versionFive = JSON.parse(versionFiveValue) as VersionFiveDatabase;
-        const migrated: WebDatabase = { ...versionFive, version: 6, plannedPurchases: [] };
+        const migrated: WebDatabase = { ...versionFive, version: 7, plannedPurchases: [], bankSlipImports: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -204,7 +237,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionFourValue) {
       try {
         const versionFour = JSON.parse(versionFourValue) as VersionFourDatabase;
-        const migrated: WebDatabase = { ...versionFour, version: 6, fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [] };
+        const migrated: WebDatabase = { ...versionFour, version: 7, fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -215,7 +248,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionThreeValue) {
       try {
         const versionThree = JSON.parse(versionThreeValue) as VersionThreeDatabase;
-        const migrated: WebDatabase = { ...versionThree, version: 6, budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [] };
+        const migrated: WebDatabase = { ...versionThree, version: 7, budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -226,7 +259,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionTwoValue) {
       try {
         const versionTwo = JSON.parse(versionTwoValue) as VersionTwoDatabase;
-        const migrated: WebDatabase = { ...versionTwo, version: 6, expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [] };
+        const migrated: WebDatabase = { ...versionTwo, version: 7, expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {

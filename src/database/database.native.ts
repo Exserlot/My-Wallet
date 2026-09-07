@@ -146,6 +146,18 @@ async function migrate(database: SQLiteDatabase) {
         ON planned_purchases(status, priority, created_at DESC);
       PRAGMA user_version = 6;
     `);
+    currentVersion = 6;
+  }
+
+  if (currentVersion === 6) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS bank_slip_imports (
+        fingerprint TEXT PRIMARY KEY NOT NULL,
+        expense_id TEXT NOT NULL UNIQUE REFERENCES transactions(id),
+        imported_at TEXT NOT NULL
+      );
+      PRAGMA user_version = 7;
+    `);
   }
 }
 

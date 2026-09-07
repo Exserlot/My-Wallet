@@ -32,6 +32,9 @@ export default function TransactionListScreen() {
             <Text style={styles.expenseButtonText}>− รายจ่าย</Text>
           </Pressable>
         </View>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/transactions/slips')} style={styles.slipButton}>
+          <Text style={styles.slipButtonText}>▣ นำเข้าสลิปหลายรูป</Text>
+        </Pressable>
 
         <View style={styles.listToolbar}>
           <View style={styles.filterRow}>
@@ -99,6 +102,8 @@ const styles = StyleSheet.create({
   expenseButton: { backgroundColor: '#B34B43' },
   incomeButtonText: { color: '#FFFFFF', fontWeight: '800' },
   expenseButtonText: { color: '#FFFFFF', fontWeight: '800' },
+  slipButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#176B48', borderRadius: 13, backgroundColor: '#F4FBF6' },
+  slipButtonText: { color: '#176B48', fontWeight: '800' },
   listToolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   filterButton: { paddingHorizontal: 11, paddingVertical: 7, borderWidth: 1, borderColor: '#C9D0C9', borderRadius: 999, backgroundColor: '#FFFEF9' },

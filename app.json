@@ -30,7 +30,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "อนุญาตให้ My Wallet เลือกรูปสลิปเพื่อสร้างรายจ่ายในเครื่อง"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
