@@ -8,8 +8,13 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/icon.png",
     "android": {
+      "package": "com.exserlot.mywallet",
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#EAF3EC",
@@ -17,6 +22,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
+    },
+    "ios": {
+      "bundleIdentifier": "com.exserlot.mywallet"
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +42,13 @@
         }
       ],
       "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
       [
         "expo-notifications",
         {
