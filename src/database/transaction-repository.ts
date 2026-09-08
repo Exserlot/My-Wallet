@@ -24,6 +24,7 @@ export interface TransactionRepository {
   listRecent(limit?: number, options?: { uncategorizedOnly?: boolean }): Promise<Transaction[]>;
   listInRange(start: string, end: string): Promise<Transaction[]>;
   updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction>;
+  deleteTransaction(id: string): Promise<void>;
   updateExpenseCategory(id: string, categoryId: string | null): Promise<Transaction>;
   getTotals(start: string, end: string): Promise<CashFlowTotals>;
 }

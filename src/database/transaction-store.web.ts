@@ -105,6 +105,17 @@ export const transactionRepository: TransactionRepository = {
     return toTransaction(updated);
   },
 
+  async deleteTransaction(id) {
+    const database = readWebDatabase();
+    const target = database.transactions.find((transaction) => transaction.id === id);
+    if (!target || target.kind === 'opening-balance') throw new Error('Cash flow transaction not found');
+    const linked = target.source === 'bank-slip'
+      || database.fixedCostOccurrences.some((occurrence) => occurrence.expenseId === target.id)
+      || database.plannedPurchases.some((purchase) => purchase.expenseId === target.id);
+    if (linked) throw new Error('Linked transaction cannot be deleted');
+    writeWebDatabase({ ...database, transactions: database.transactions.filter((transaction) => transaction.id !== id) });
+  },
+
   async updateExpenseCategory(id, categoryId) {
     const database = readWebDatabase();
     if (categoryId && !database.expenseCategories.some((category) => category.id === categoryId && category.archivedAt === null)) {

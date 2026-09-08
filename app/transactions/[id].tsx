@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { transactionRepository } from '@/database/transaction-store';
@@ -104,6 +104,40 @@ export default function EditTransactionScreen() {
     }
   }
 
+  function deleteCurrentTransaction() {
+    if (!transaction || transaction.kindLocked) return;
+    setSaving(true);
+    setError(null);
+    void transactionRepository.deleteTransaction(transaction.id).then(() => {
+      router.replace('/transactions');
+    }).catch(() => {
+      setError('ลบรายการไม่สำเร็จ กรุณาลองใหม่');
+      setSaving(false);
+    });
+  }
+
+  function confirmDelete() {
+    if (!transaction || transaction.kindLocked) return;
+    if (Platform.OS === 'web') {
+      if (window.confirm('ลบรายการนี้?\nยอดของกระเป๋าและสรุปรายเดือนจะถูกคำนวณใหม่ การลบไม่สามารถย้อนกลับได้')) {
+        deleteCurrentTransaction();
+      }
+      return;
+    }
+    Alert.alert(
+      'ลบรายการนี้?',
+      'ยอดของกระเป๋าและสรุปรายเดือนจะถูกคำนวณใหม่ การลบไม่สามารถย้อนกลับได้',
+      [
+        { text: 'ยกเลิก', style: 'cancel' },
+        {
+          text: 'ลบรายการ',
+          style: 'destructive',
+          onPress: deleteCurrentTransaction,
+        },
+      ],
+    );
+  }
+
   if (loading) {
     return <SafeAreaView edges={['bottom']} style={styles.center}><ActivityIndicator color="#176B48" /></SafeAreaView>;
   }
@@ -183,6 +217,11 @@ export default function EditTransactionScreen() {
               <Text style={styles.saveText}>{saving ? 'กำลังบันทึก…' : 'บันทึกการแก้ไข'}</Text>
             </Pressable>
           ) : null}
+          {transaction && !transaction.kindLocked ? (
+            <Pressable accessibilityRole="button" disabled={saving} onPress={confirmDelete} style={({ pressed }) => [styles.deleteButton, (pressed || saving) && styles.pressed]}>
+              <Text style={styles.deleteText}>ลบรายการนี้</Text>
+            </Pressable>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -222,5 +261,7 @@ const styles = StyleSheet.create({
   expenseSave: { backgroundColor: '#B34B43' },
   incomeSave: { backgroundColor: '#176B48' },
   saveText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  deleteButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#C85A52', borderRadius: 14, backgroundColor: '#FFF8F7' },
+  deleteText: { color: '#A93D38', fontWeight: '800' },
   pressed: { opacity: 0.7 },
 });

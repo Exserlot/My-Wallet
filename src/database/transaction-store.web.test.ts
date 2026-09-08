@@ -59,4 +59,14 @@ describe('web transaction editing', () => {
       walletId: 'cash', kind: 'income', amountMinor: 10000, categoryId: null, occurredAt: '2026-09-02', note: null,
     })).rejects.toThrow('Linked transaction kind cannot be changed');
   });
+
+  it('deletes only a manual transaction that is not linked', async () => {
+    const { transactionRepository } = await import('./transaction-store.web');
+    await transactionRepository.deleteTransaction('income-1');
+    expect(readWebDatabase().transactions).toHaveLength(0);
+
+    writeWebDatabase({ ...database(), transactions: [{ ...database().transactions[0], source: 'bank-slip' }] });
+    await expect(transactionRepository.deleteTransaction('income-1')).rejects.toThrow('Linked transaction cannot be deleted');
+    expect(readWebDatabase().transactions).toHaveLength(1);
+  });
 });

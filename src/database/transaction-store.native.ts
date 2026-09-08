@@ -211,6 +211,23 @@ export const transactionRepository: TransactionRepository = {
     return updated;
   },
 
+  async deleteTransaction(id) {
+    const database = await getDatabase();
+    const target = await database.getFirstAsync<{ kind: string; kind_locked: number }>(
+      `SELECT transactions.kind,
+        CASE WHEN transactions.source = 'bank-slip'
+          OR EXISTS (SELECT 1 FROM fixed_cost_occurrences WHERE fixed_cost_occurrences.expense_id = transactions.id)
+          OR EXISTS (SELECT 1 FROM planned_purchases WHERE planned_purchases.expense_id = transactions.id)
+          THEN 1 ELSE 0 END AS kind_locked
+       FROM transactions WHERE transactions.id = ?`,
+      id,
+    );
+    if (!target || target.kind === 'OPENING_BALANCE') throw new Error('Cash flow transaction not found');
+    if (target.kind_locked === 1) throw new Error('Linked transaction cannot be deleted');
+    const result = await database.runAsync('DELETE FROM transactions WHERE id = ?', id);
+    if (result.changes !== 1) throw new Error('Cash flow transaction not found');
+  },
+
   async updateExpenseCategory(id, categoryId) {
     const database = await getDatabase();
     if (categoryId) {
