@@ -50,7 +50,9 @@ export const walletRepository: WalletRepository = {
           return transaction.kind === 'expense'
             ? sum - transaction.amountMinor
             : sum + transaction.amountMinor;
-        }, 0),
+        }, 0)
+        + database.transfers.filter((transfer) => transfer.toWalletId === wallet.id).reduce((sum, transfer) => sum + transfer.amountMinor, 0)
+        - database.transfers.filter((transfer) => transfer.fromWalletId === wallet.id).reduce((sum, transfer) => sum + transfer.amountMinor, 0),
     }));
   },
 };

@@ -74,16 +74,16 @@ export const walletRepository: WalletRepository = {
         wallets.type,
         wallets.currency,
         wallets.created_at,
-        COALESCE(SUM(
+        COALESCE((SELECT SUM(
           CASE
-            WHEN transactions.kind IN ('OPENING_BALANCE', 'INCOME') THEN transactions.amount_minor
-            WHEN transactions.kind = 'EXPENSE' THEN -transactions.amount_minor
+            WHEN wallet_transactions.kind IN ('OPENING_BALANCE', 'INCOME') THEN wallet_transactions.amount_minor
+            WHEN wallet_transactions.kind = 'EXPENSE' THEN -wallet_transactions.amount_minor
             ELSE 0
           END
-        ), 0) AS balance_minor
+        ) FROM transactions wallet_transactions WHERE wallet_transactions.wallet_id = wallets.id), 0)
+        + COALESCE((SELECT SUM(amount_minor) FROM wallet_transfers WHERE to_wallet_id = wallets.id), 0)
+        - COALESCE((SELECT SUM(amount_minor) FROM wallet_transfers WHERE from_wallet_id = wallets.id), 0) AS balance_minor
       FROM wallets
-      LEFT JOIN transactions ON transactions.wallet_id = wallets.id
-      GROUP BY wallets.id
       ORDER BY wallets.created_at ASC
     `);
     return rows.map(toWalletSummary);

@@ -169,6 +169,24 @@ async function migrate(database: SQLiteDatabase) {
       );
       PRAGMA user_version = 8;
     `);
+    currentVersion = 8;
+  }
+
+  if (currentVersion === 8) {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS wallet_transfers (
+        id TEXT PRIMARY KEY NOT NULL,
+        from_wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        to_wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+        occurred_at TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        CHECK (from_wallet_id <> to_wallet_id)
+      );
+      CREATE INDEX IF NOT EXISTS wallet_transfers_occurred_at_idx ON wallet_transfers(occurred_at DESC);
+      PRAGMA user_version = 9;
+    `);
   }
 }
 
