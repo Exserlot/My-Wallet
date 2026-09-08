@@ -82,10 +82,26 @@ export const walletRepository: WalletRepository = {
           END
         ) FROM transactions wallet_transactions WHERE wallet_transactions.wallet_id = wallets.id), 0)
         + COALESCE((SELECT SUM(amount_minor) FROM wallet_transfers WHERE to_wallet_id = wallets.id), 0)
-        - COALESCE((SELECT SUM(amount_minor) FROM wallet_transfers WHERE from_wallet_id = wallets.id), 0) AS balance_minor
+        - COALESCE((SELECT SUM(amount_minor) FROM wallet_transfers WHERE from_wallet_id = wallets.id), 0)
+        + COALESCE((SELECT SUM(delta_minor) FROM wallet_adjustments WHERE wallet_id = wallets.id), 0) AS balance_minor
       FROM wallets
       ORDER BY wallets.created_at ASC
     `);
     return rows.map(toWalletSummary);
+  },
+
+  async setWalletBalance(input) {
+    if (!Number.isSafeInteger(input.targetBalanceMinor)) throw new Error('Target balance must be safe minor units');
+    const wallet = (await walletRepository.listWallets()).find((item) => item.id === input.walletId);
+    if (!wallet) throw new Error('Wallet not found');
+    const deltaMinor = input.targetBalanceMinor - wallet.balanceMinor;
+    if (!Number.isSafeInteger(deltaMinor) || deltaMinor === 0) throw new Error('Balance adjustment must be non-zero');
+    const database = await getDatabase();
+    const id = randomUUID();
+    await database.runAsync(
+      'INSERT INTO wallet_adjustments (id, wallet_id, delta_minor, occurred_at, note, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      id, wallet.id, deltaMinor, input.occurredAt, input.note?.trim() || null, new Date().toISOString(),
+    );
+    return { id, walletId: wallet.id, walletName: wallet.name, deltaMinor, occurredAt: input.occurredAt, note: input.note?.trim() || null };
   },
 };

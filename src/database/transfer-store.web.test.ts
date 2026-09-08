@@ -15,7 +15,7 @@ class MemoryStorage implements Storage {
 }
 
 const database = (): WebDatabase => ({
-  version: 8,
+  version: 9,
   wallets: [
     { id: 'cash', name: 'เงินสด', type: 'cash', currency: 'THB', createdAt: '2026-09-01' },
     { id: 'bank', name: 'ธนาคาร', type: 'bank-account', currency: 'THB', createdAt: '2026-09-02' },
@@ -24,7 +24,7 @@ const database = (): WebDatabase => ({
     { id: 'cash-opening', walletId: 'cash', kind: 'opening-balance', amountMinor: 100000, occurredAt: '2026-09-01', createdAt: '2026-09-01', categoryId: null, note: null, source: 'manual' },
     { id: 'bank-opening', walletId: 'bank', kind: 'opening-balance', amountMinor: 50000, occurredAt: '2026-09-01', createdAt: '2026-09-01', categoryId: null, note: null, source: 'manual' },
   ],
-  expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [],
+  expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [], walletAdjustments: [],
 });
 
 describe('web wallet transfer', () => {

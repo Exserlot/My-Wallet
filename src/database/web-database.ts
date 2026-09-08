@@ -96,8 +96,17 @@ export type WebTransfer = Readonly<{
   createdAt: string;
 }>;
 
+export type WebWalletAdjustment = Readonly<{
+  id: string;
+  walletId: string;
+  deltaMinor: number;
+  occurredAt: string;
+  note: string | null;
+  createdAt: string;
+}>;
+
 export type WebDatabase = Readonly<{
-  version: 8;
+  version: 9;
   wallets: Wallet[];
   transactions: WebTransaction[];
   expenseCategories: ExpenseCategory[];
@@ -108,9 +117,11 @@ export type WebDatabase = Readonly<{
   plannedPurchases: WebPlannedPurchase[];
   bankSlipImports: WebBankSlipImport[];
   transfers: WebTransfer[];
+  walletAdjustments: WebWalletAdjustment[];
 }>;
 
-type VersionSevenDatabase = Omit<WebDatabase, 'version' | 'transfers'> & Readonly<{ version: 7 }>;
+type VersionEightDatabase = Omit<WebDatabase, 'version' | 'walletAdjustments'> & Readonly<{ version: 8 }>;
+type VersionSevenDatabase = Omit<VersionEightDatabase, 'version' | 'transfers'> & Readonly<{ version: 7 }>;
 
 type LegacyDatabase = Readonly<{
   wallets?: Wallet[];
@@ -167,7 +178,8 @@ type VersionSixDatabase = Readonly<{
   plannedPurchases: WebPlannedPurchase[];
 }>;
 
-const storageKey = 'my-wallet.database.v8';
+const storageKey = 'my-wallet.database.v9';
+const versionEightStorageKey = 'my-wallet.database.v8';
 const versionSevenStorageKey = 'my-wallet.database.v7';
 const versionSixStorageKey = 'my-wallet.database.v6';
 const versionFiveStorageKey = 'my-wallet.database.v5';
@@ -177,7 +189,7 @@ const versionTwoStorageKey = 'my-wallet.database.v2';
 const legacyStorageKey = 'my-wallet.database.v1';
 
 const emptyDatabase = (): WebDatabase => ({
-  version: 8,
+  version: 9,
   wallets: [],
   transactions: [],
   expenseCategories: [],
@@ -188,6 +200,7 @@ const emptyDatabase = (): WebDatabase => ({
   plannedPurchases: [],
   bankSlipImports: [],
   transfers: [],
+  walletAdjustments: [],
 });
 
 function migrateLegacyDatabase(): WebDatabase | null {
@@ -198,7 +211,7 @@ function migrateLegacyDatabase(): WebDatabase | null {
     const legacy = JSON.parse(legacyValue) as LegacyDatabase;
     const createdAt = new Date().toISOString();
     return {
-      version: 8,
+      version: 9,
       wallets: legacy.wallets ?? [],
       transactions: (legacy.openingBalances ?? []).map((balance) => ({
         ...balance,
@@ -216,6 +229,7 @@ function migrateLegacyDatabase(): WebDatabase | null {
       plannedPurchases: [],
       bankSlipImports: [],
       transfers: [],
+      walletAdjustments: [],
     };
   } catch {
     return null;
@@ -227,11 +241,22 @@ export function readWebDatabase(): WebDatabase {
   const value = localStorage.getItem(storageKey);
 
   if (!value) {
+    const versionEightValue = localStorage.getItem(versionEightStorageKey);
+    if (versionEightValue) {
+      try {
+        const versionEight = JSON.parse(versionEightValue) as VersionEightDatabase;
+        const migrated: WebDatabase = { ...versionEight, version: 9, walletAdjustments: [] };
+        writeWebDatabase(migrated);
+        return migrated;
+      } catch {
+        // Fall through to an older migration or an empty database.
+      }
+    }
     const versionSevenValue = localStorage.getItem(versionSevenStorageKey);
     if (versionSevenValue) {
       try {
         const versionSeven = JSON.parse(versionSevenValue) as VersionSevenDatabase;
-        const migrated: WebDatabase = { ...versionSeven, version: 8, transfers: [] };
+        const migrated: WebDatabase = { ...versionSeven, version: 9, transfers: [], walletAdjustments: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -242,7 +267,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionSixValue) {
       try {
         const versionSix = JSON.parse(versionSixValue) as VersionSixDatabase;
-        const migrated: WebDatabase = { ...versionSix, version: 8, bankSlipImports: [], transfers: [] };
+        const migrated: WebDatabase = { ...versionSix, version: 9, bankSlipImports: [], transfers: [], walletAdjustments: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -253,7 +278,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionFiveValue) {
       try {
         const versionFive = JSON.parse(versionFiveValue) as VersionFiveDatabase;
-        const migrated: WebDatabase = { ...versionFive, version: 8, plannedPurchases: [], bankSlipImports: [], transfers: [] };
+        const migrated: WebDatabase = { ...versionFive, version: 9, plannedPurchases: [], bankSlipImports: [], transfers: [], walletAdjustments: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -264,7 +289,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionFourValue) {
       try {
         const versionFour = JSON.parse(versionFourValue) as VersionFourDatabase;
-        const migrated: WebDatabase = { ...versionFour, version: 8, fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [] };
+        const migrated: WebDatabase = { ...versionFour, version: 9, fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [], walletAdjustments: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -275,7 +300,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionThreeValue) {
       try {
         const versionThree = JSON.parse(versionThreeValue) as VersionThreeDatabase;
-        const migrated: WebDatabase = { ...versionThree, version: 8, budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [] };
+        const migrated: WebDatabase = { ...versionThree, version: 9, budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [], walletAdjustments: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {
@@ -286,7 +311,7 @@ export function readWebDatabase(): WebDatabase {
     if (versionTwoValue) {
       try {
         const versionTwo = JSON.parse(versionTwoValue) as VersionTwoDatabase;
-        const migrated: WebDatabase = { ...versionTwo, version: 8, expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [] };
+        const migrated: WebDatabase = { ...versionTwo, version: 9, expenseCategories: [], budgetCycles: [], budgetRevisions: [], fixedCostSchedules: [], fixedCostOccurrences: [], plannedPurchases: [], bankSlipImports: [], transfers: [], walletAdjustments: [] };
         writeWebDatabase(migrated);
         return migrated;
       } catch {

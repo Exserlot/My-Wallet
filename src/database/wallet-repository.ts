@@ -1,4 +1,4 @@
-import type { WalletSummary, WalletType } from '@/domain/wallets';
+import type { WalletAdjustment, WalletSummary, WalletType } from '@/domain/wallets';
 
 export type CreateWalletInput = Readonly<{
   name: string;
@@ -7,8 +7,15 @@ export type CreateWalletInput = Readonly<{
   occurredAt: string;
 }>;
 
+export type SetWalletBalanceInput = Readonly<{
+  walletId: string;
+  targetBalanceMinor: number;
+  occurredAt: string;
+  note: string | null;
+}>;
+
 export interface WalletRepository {
   createWallet(input: CreateWalletInput): Promise<WalletSummary>;
   listWallets(): Promise<WalletSummary[]>;
+  setWalletBalance(input: SetWalletBalanceInput): Promise<WalletAdjustment>;
 }
-

@@ -15,6 +15,15 @@ export type WalletSummary = Wallet &
     balanceMinor: number;
   }>;
 
+export type WalletAdjustment = Readonly<{
+  id: string;
+  walletId: string;
+  walletName: string;
+  deltaMinor: number;
+  occurredAt: string;
+  note: string | null;
+}>;
+
 export function validateWalletName(value: string): string | null {
   const name = value.trim();
   if (!name) return 'กรุณาตั้งชื่อกระเป๋า';
@@ -47,6 +56,19 @@ export function parseMoneyInput(value: string): number | null {
   const amountMinor = Number(whole) * 100 + Number(decimal.padEnd(2, '0'));
   if (!Number.isSafeInteger(amountMinor)) return null;
   return amountMinor;
+}
+
+export function parseSignedMoneyInput(value: string): number | null {
+  const normalized = value
+    .trim()
+    .replace(/[๐-๙]/g, (digit) => thaiDigits[digit])
+    .replace(/,/g, '');
+  if (!/^-?\d+(\.\d{0,2})?$/.test(normalized)) return null;
+  const sign = normalized.startsWith('-') ? -1 : 1;
+  const unsigned = normalized.replace(/^-/, '');
+  const [whole, decimal = ''] = unsigned.split('.');
+  const amountMinor = sign * (Number(whole) * 100 + Number(decimal.padEnd(2, '0')));
+  return Number.isSafeInteger(amountMinor) ? amountMinor : null;
 }
 
 export const parseOpeningBalance = parseMoneyInput;

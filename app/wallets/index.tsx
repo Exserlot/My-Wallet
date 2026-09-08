@@ -41,7 +41,10 @@ export default function WalletListScreen() {
               <Text style={styles.walletName}>{wallet.name}</Text>
               <Text style={styles.walletType}>{typeLabels[wallet.type]}</Text>
             </View>
-            <Text style={styles.walletBalance}>{formatMoney(wallet.balanceMinor)}</Text>
+            <View style={styles.walletActions}>
+              <Text style={styles.walletBalance}>{formatMoney(wallet.balanceMinor)}</Text>
+              <Pressable accessibilityRole="button" onPress={() => router.push(`/wallets/adjust?id=${encodeURIComponent(wallet.id)}` as Href)}><Text style={styles.adjustLink}>ปรับยอด</Text></Pressable>
+            </View>
           </View>
         ))}
 
@@ -73,6 +76,8 @@ const styles = StyleSheet.create({
   walletName: { color: '#17211B', fontSize: 17, fontWeight: '700' },
   walletType: { marginTop: 3, color: '#66736A', fontSize: 13 },
   walletBalance: { color: '#173F2B', fontSize: 17, fontWeight: '800' },
+  walletActions: { alignItems: 'flex-end', gap: 5 },
+  adjustLink: { color: '#176B48', fontSize: 12, fontWeight: '800' },
   emptyCard: { padding: 22, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#B8C1B9', borderRadius: 16 },
   emptyTitle: { color: '#17211B', fontSize: 17, fontWeight: '700' },
   emptyText: { marginTop: 4, color: '#66736A', textAlign: 'center' },

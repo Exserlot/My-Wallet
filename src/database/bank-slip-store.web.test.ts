@@ -16,7 +16,7 @@ class MemoryStorage implements Storage {
 }
 
 const emptyDatabase = (): WebDatabase => ({
-  version: 8,
+  version: 9,
   wallets: [{ id: 'wallet-1', name: 'บัญชีทดสอบ', type: 'bank-account', currency: 'THB', createdAt: '2026-09-08T00:00:00.000Z' }],
   transactions: [],
   expenseCategories: [],
@@ -27,6 +27,7 @@ const emptyDatabase = (): WebDatabase => ({
   plannedPurchases: [],
   bankSlipImports: [],
   transfers: [],
+  walletAdjustments: [],
 });
 
 describe('web bank slip repository', () => {

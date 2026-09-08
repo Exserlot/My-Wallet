@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseOpeningBalance, validateWalletName } from './wallets';
+import { parseOpeningBalance, parseSignedMoneyInput, validateWalletName } from './wallets';
 
 describe('parseOpeningBalance', () => {
   it.each([
@@ -27,3 +27,10 @@ describe('validateWalletName', () => {
   });
 });
 
+describe('parseSignedMoneyInput', () => {
+  it('accepts positive, zero, and negative balances', () => {
+    expect(parseSignedMoneyInput('1,234.50')).toBe(123450);
+    expect(parseSignedMoneyInput('0')).toBe(0);
+    expect(parseSignedMoneyInput('-45.25')).toBe(-4525);
+  });
+});
