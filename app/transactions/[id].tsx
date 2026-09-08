@@ -4,29 +4,10 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { transactionRepository } from '@/database/transaction-store';
-import type { CashFlowKind, Transaction } from '@/domain/transactions';
+import { localDateInput, occurredAtFromLocalDateInput, type CashFlowKind, type Transaction } from '@/domain/transactions';
 import { parseMoneyInput } from '@/domain/wallets';
 import { useExpenseCategories } from '@/features/expense-categories/use-expense-categories';
 import { useWallets } from '@/features/wallets/use-wallets';
-
-function localDateValue(occurredAt: string) {
-  const date = new Date(occurredAt);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseLocalDate(value: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day, 12, 0, 0);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
-  return date.toISOString();
-}
 
 export default function EditTransactionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -54,7 +35,7 @@ export default function EditTransactionScreen() {
         setAmount((found.amount.amountMinor / 100).toFixed(2));
         setWalletId(found.walletId);
         setCategoryId(found.categoryId);
-        setDate(localDateValue(found.occurredAt));
+        setDate(localDateInput(found.occurredAt));
         setNote(found.note ?? '');
       }
       setLoading(false);
@@ -76,7 +57,7 @@ export default function EditTransactionScreen() {
       setError('กรุณากรอกจำนวนเงินที่มากกว่า 0 และมีทศนิยมไม่เกิน 2 ตำแหน่ง');
       return;
     }
-    const occurredAt = parseLocalDate(date);
+    const occurredAt = occurredAtFromLocalDateInput(date, transaction.occurredAt);
     if (!occurredAt) {
       setError('กรุณากรอกวันที่จริงในรูปแบบ YYYY-MM-DD เช่น 2026-09-08');
       return;

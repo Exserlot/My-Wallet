@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { transactionRepository } from '@/database/transaction-store';
-import type { CashFlowKind } from '@/domain/transactions';
+import { localDateInput, occurredAtFromLocalDateInput, relativeLocalDateInput, type CashFlowKind } from '@/domain/transactions';
 import { parseMoneyInput } from '@/domain/wallets';
 import { useExpenseCategories } from '@/features/expense-categories/use-expense-categories';
 import { useWallets } from '@/features/wallets/use-wallets';
@@ -16,6 +16,7 @@ export default function NewTransactionScreen() {
   const [amount, setAmount] = useState('');
   const [walletId, setWalletId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [date, setDate] = useState(() => localDateInput());
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -37,6 +38,11 @@ export default function NewTransactionScreen() {
       setError('กรุณาสร้างและเลือกกระเป๋าก่อน');
       return;
     }
+    const occurredAt = occurredAtFromLocalDateInput(date);
+    if (!occurredAt) {
+      setError('กรุณากรอกวันที่จริงในรูปแบบ YYYY-MM-DD เช่น 2026-09-08');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -47,7 +53,7 @@ export default function NewTransactionScreen() {
         amountMinor,
         categoryId: kind === 'expense' ? categoryId : null,
         note: note || null,
-        occurredAt: new Date().toISOString(),
+        occurredAt,
       });
       router.replace('/transactions');
     } catch {
@@ -121,6 +127,16 @@ export default function NewTransactionScreen() {
           ) : null}
 
           <View style={styles.fieldGroup}>
+            <Text style={styles.label}>วันที่</Text>
+            <View style={styles.quickDateRow}>
+              <Pressable accessibilityRole="button" onPress={() => setDate(localDateInput())} style={styles.quickDateButton}><Text style={styles.quickDateText}>วันนี้</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => setDate(relativeLocalDateInput(-1))} style={styles.quickDateButton}><Text style={styles.quickDateText}>เมื่อวาน</Text></Pressable>
+            </View>
+            <TextInput accessibilityLabel="วันที่" autoCapitalize="none" inputMode="numeric" maxLength={10} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8A948C" style={styles.input} value={date} />
+            <Text style={styles.hint}>เลือกปุ่มด้านบนหรือกรอก เช่น 2026-09-08</Text>
+          </View>
+
+          <View style={styles.fieldGroup}>
             <Text style={styles.label}>รายละเอียด (ไม่บังคับ)</Text>
             <TextInput accessibilityLabel="รายละเอียด" maxLength={120} onChangeText={setNote} placeholder={kind === 'expense' ? 'เช่น ค่าอาหารกลางวัน' : 'เช่น เงินเดือน'} placeholderTextColor="#8A948C" style={styles.input} value={note} />
           </View>
@@ -159,6 +175,9 @@ const styles = StyleSheet.create({
   categoryLink: { color: '#176B48', fontSize: 13, fontWeight: '700' },
   categoryActive: { borderColor: '#B86B25', backgroundColor: '#FFF0DC' },
   categoryTextActive: { color: '#7E4517' },
+  quickDateRow: { flexDirection: 'row', gap: 8 },
+  quickDateButton: { minHeight: 38, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#176B48', borderRadius: 999, backgroundColor: '#F4FBF6' },
+  quickDateText: { color: '#176B48', fontWeight: '700' },
   emptyWallet: { padding: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#176B48', borderRadius: 13 },
   emptyWalletText: { color: '#176B48', textAlign: 'center', fontWeight: '700' },
   hint: { color: '#66736A' },
