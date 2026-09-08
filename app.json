@@ -61,7 +61,8 @@
         {
           "photosPermission": "อนุญาตให้ My Wallet เลือกรูปสลิปเพื่อสร้างรายจ่ายในเครื่อง"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

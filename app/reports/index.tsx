@@ -7,6 +7,7 @@ import { buildCashFlowSeries, buildExpenseCategoryReport, customReportRange, typ
 import { formatMoney } from '@/domain/wallets';
 import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';
 import { useReportData } from '@/features/reports/use-report-data';
+import { exportTransactionsCsv } from '@/services/transaction-csv-exporter';
 
 const periodOptions: readonly Readonly<{ id: ReportPeriod; label: string }>[] = [
   { id: 'current-month', label: 'เดือนนี้' },
@@ -34,6 +35,8 @@ export default function ReportsScreen() {
   const [customRange, setCustomRange] = useState<ReportRange | null>(null);
   const [customError, setCustomError] = useState<string | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const { transactions, range, loading, error } = useReportData(period, customMode ? customRange : null);
   const { budget } = useMonthlyBudget();
   const allCategories = useMemo(() => buildExpenseCategoryReport(transactions, Number.MAX_SAFE_INTEGER), [transactions]);
@@ -65,6 +68,18 @@ export default function ReportsScreen() {
     setCustomError(null);
     setCustomRange(nextRange);
     setShowAllCategories(false);
+  }
+
+  async function exportCsv() {
+    try {
+      setExporting(true);
+      setExportError(null);
+      await exportTransactionsCsv(transactions, range.start, range.end);
+    } catch {
+      setExportError('สร้างไฟล์ CSV ไม่สำเร็จ กรุณาลองใหม่');
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -107,6 +122,11 @@ export default function ReportsScreen() {
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}><Text style={styles.summaryLabel}>สุทธิ</Text><Text style={styles.summaryValue}>{formatMoney(incomeMinor - expenseMinor)}</Text></View>
         </View>
+        <Pressable accessibilityRole="button" disabled={loading || exporting || transactions.length === 0} onPress={() => void exportCsv()} style={[styles.exportButton, (loading || exporting || transactions.length === 0) && styles.disabled]}>
+          <Text style={styles.exportText}>{exporting ? 'กำลังสร้างไฟล์…' : '⇩ ส่งออกรายการช่วงนี้เป็น CSV'}</Text>
+        </Pressable>
+        <Text style={styles.exportHint}>ไฟล์มีข้อมูลการเงินตามช่วงที่เลือก แต่ไม่รวมรูปสลิปหรือข้อมูล QR</Text>
+        {exportError ? <Text accessibilityRole="alert" style={styles.error}>{exportError}</Text> : null}
 
         <View>
           <Text style={styles.sectionTitle}>รายจ่ายตามหมวด</Text>
@@ -181,6 +201,10 @@ const styles = StyleSheet.create({
   dateInput: { minHeight: 44, paddingHorizontal: 11, borderWidth: 1, borderColor: '#D9B984', borderRadius: 11, color: '#17211B', backgroundColor: '#FFFFFF' },
   applyButton: { minHeight: 43, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#176B48' },
   applyText: { color: '#FFFFFF', fontWeight: '800' },
+  exportButton: { minHeight: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#176B48', borderRadius: 13, backgroundColor: '#F4FBF6' },
+  exportText: { color: '#176B48', fontWeight: '800' },
+  exportHint: { marginTop: -8, color: '#66736A', fontSize: 11, textAlign: 'center' },
+  disabled: { opacity: 0.45 },
   summaryCard: { flexDirection: 'row', alignItems: 'stretch', padding: 16, borderRadius: 17, backgroundColor: '#FFFEF9' },
   summaryItem: { flex: 1, gap: 4 },
   summaryDivider: { width: 1, marginHorizontal: 10, backgroundColor: '#DFE4DA' },
