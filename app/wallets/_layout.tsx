@@ -13,6 +13,7 @@ export default function WalletLayout() {
       <Stack.Screen name="new" options={{ title: 'เพิ่มกระเป๋า' }} />
       <Stack.Screen name="transfer" options={{ title: 'โอนระหว่าง Wallet' }} />
       <Stack.Screen name="adjust" options={{ title: 'ปรับยอดกระเป๋า' }} />
+      <Stack.Screen name="edit" options={{ title: 'แก้ไขกระเป๋า' }} />
     </Stack>
   );
 }

@@ -14,8 +14,15 @@ export type SetWalletBalanceInput = Readonly<{
   note: string | null;
 }>;
 
+export type UpdateWalletInput = Readonly<{
+  id: string;
+  name: string;
+  type: WalletType;
+}>;
+
 export interface WalletRepository {
   createWallet(input: CreateWalletInput): Promise<WalletSummary>;
   listWallets(): Promise<WalletSummary[]>;
+  updateWallet(input: UpdateWalletInput): Promise<WalletSummary>;
   setWalletBalance(input: SetWalletBalanceInput): Promise<WalletAdjustment>;
 }

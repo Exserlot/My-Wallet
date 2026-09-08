@@ -37,4 +37,12 @@ describe('web wallet balance adjustment', () => {
     const { walletRepository } = await import('./wallet-store.web');
     await expect(walletRepository.setWalletBalance({ walletId: 'cash', targetBalanceMinor: 100000, occurredAt: '2026-09-09', note: null })).rejects.toThrow('non-zero');
   });
+
+  it('renames a wallet without changing its balance or transactions', async () => {
+    const { walletRepository } = await import('./wallet-store.web');
+    const updated = await walletRepository.updateWallet({ id: 'cash', name: ' เงินสดหน้าร้าน ', type: 'cash' });
+    expect(updated.name).toBe('เงินสดหน้าร้าน');
+    expect(updated.balanceMinor).toBe(100000);
+    expect(readWebDatabase().transactions).toHaveLength(1);
+  });
 });

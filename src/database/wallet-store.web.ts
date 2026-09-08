@@ -1,6 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 
-import type { Wallet, WalletAdjustment, WalletSummary } from '@/domain/wallets';
+import { validateWalletName, type Wallet, type WalletAdjustment, type WalletSummary } from '@/domain/wallets';
 
 import { readWebDatabase, writeWebDatabase, type WebTransaction } from './web-database';
 import type { CreateWalletInput, WalletRepository } from './wallet-repository';
@@ -55,6 +55,19 @@ export const walletRepository: WalletRepository = {
         - database.transfers.filter((transfer) => transfer.fromWalletId === wallet.id).reduce((sum, transfer) => sum + transfer.amountMinor, 0)
         + database.walletAdjustments.filter((adjustment) => adjustment.walletId === wallet.id).reduce((sum, adjustment) => sum + adjustment.deltaMinor, 0),
     }));
+  },
+
+  async updateWallet(input) {
+    const nameError = validateWalletName(input.name);
+    if (nameError) throw new Error(nameError);
+    const database = readWebDatabase();
+    const target = database.wallets.find((wallet) => wallet.id === input.id);
+    if (!target) throw new Error('Wallet not found');
+    const updated: Wallet = { ...target, name: input.name.trim(), type: input.type };
+    writeWebDatabase({ ...database, wallets: database.wallets.map((wallet) => wallet.id === input.id ? updated : wallet) });
+    const summary = (await walletRepository.listWallets()).find((wallet) => wallet.id === input.id);
+    if (!summary) throw new Error('Wallet not found after update');
+    return summary;
   },
 
   async setWalletBalance(input) {
