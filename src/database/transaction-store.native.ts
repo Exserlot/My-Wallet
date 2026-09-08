@@ -17,6 +17,7 @@ type TransactionRow = {
   category_name: string | null;
   note: string | null;
   source: 'manual' | 'bank-slip';
+  kind_locked: number;
 };
 
 const databaseKind: Record<CashFlowKind, 'INCOME' | 'EXPENSE'> = {
@@ -42,6 +43,7 @@ function toTransaction(row: TransactionRow): Transaction {
     occurredAt: row.occurred_at,
     note: row.note,
     source: row.source,
+    kindLocked: row.kind_locked === 1,
   };
 }
 
@@ -59,7 +61,11 @@ async function findTransaction(id: string) {
       transactions.category_id,
       expense_categories.name AS category_name,
       transactions.note,
-      transactions.source
+      transactions.source,
+      CASE WHEN transactions.source = 'bank-slip'
+        OR EXISTS (SELECT 1 FROM fixed_cost_occurrences WHERE fixed_cost_occurrences.expense_id = transactions.id)
+        OR EXISTS (SELECT 1 FROM planned_purchases WHERE planned_purchases.expense_id = transactions.id)
+        THEN 1 ELSE 0 END AS kind_locked
     FROM transactions
     JOIN wallets ON wallets.id = transactions.wallet_id
     LEFT JOIN expense_categories ON expense_categories.id = transactions.category_id
@@ -118,7 +124,11 @@ export const transactionRepository: TransactionRepository = {
         transactions.category_id,
         expense_categories.name AS category_name,
         transactions.note,
-        transactions.source
+        transactions.source,
+        CASE WHEN transactions.source = 'bank-slip'
+          OR EXISTS (SELECT 1 FROM fixed_cost_occurrences WHERE fixed_cost_occurrences.expense_id = transactions.id)
+          OR EXISTS (SELECT 1 FROM planned_purchases WHERE planned_purchases.expense_id = transactions.id)
+          THEN 1 ELSE 0 END AS kind_locked
       FROM transactions
       JOIN wallets ON wallets.id = transactions.wallet_id
       LEFT JOIN expense_categories ON expense_categories.id = transactions.category_id
@@ -145,7 +155,11 @@ export const transactionRepository: TransactionRepository = {
         transactions.category_id,
         expense_categories.name AS category_name,
         transactions.note,
-        transactions.source
+        transactions.source,
+        CASE WHEN transactions.source = 'bank-slip'
+          OR EXISTS (SELECT 1 FROM fixed_cost_occurrences WHERE fixed_cost_occurrences.expense_id = transactions.id)
+          OR EXISTS (SELECT 1 FROM planned_purchases WHERE planned_purchases.expense_id = transactions.id)
+          THEN 1 ELSE 0 END AS kind_locked
       FROM transactions
       JOIN wallets ON wallets.id = transactions.wallet_id
       LEFT JOIN expense_categories ON expense_categories.id = transactions.category_id
@@ -157,6 +171,44 @@ export const transactionRepository: TransactionRepository = {
       end,
     );
     return rows.map(toTransaction);
+  },
+
+  async updateTransaction(id, input) {
+    if (!isValidCashFlowAmount(input.amountMinor)) throw new Error('Amount must be positive minor units');
+    const database = await getDatabase();
+    const target = await database.getFirstAsync<{ kind: string; kind_locked: number }>(
+      `SELECT transactions.kind,
+        CASE WHEN transactions.source = 'bank-slip'
+          OR EXISTS (SELECT 1 FROM fixed_cost_occurrences WHERE fixed_cost_occurrences.expense_id = transactions.id)
+          OR EXISTS (SELECT 1 FROM planned_purchases WHERE planned_purchases.expense_id = transactions.id)
+          THEN 1 ELSE 0 END AS kind_locked
+       FROM transactions WHERE transactions.id = ?`,
+      id,
+    );
+    if (!target || target.kind === 'OPENING_BALANCE') throw new Error('Cash flow transaction not found');
+    if (target.kind_locked === 1 && databaseKind[input.kind] !== target.kind) throw new Error('Linked transaction kind cannot be changed');
+    const wallet = await database.getFirstAsync<{ id: string }>('SELECT id FROM wallets WHERE id = ?', input.walletId);
+    if (!wallet) throw new Error('Wallet not found');
+    const categoryId = categoryIdForCashFlow(input.kind, input.categoryId);
+    if (categoryId) {
+      const category = await database.getFirstAsync<{ id: string }>('SELECT id FROM expense_categories WHERE id = ?', categoryId);
+      if (!category) throw new Error('Expense category not found');
+    }
+    await database.runAsync(
+      `UPDATE transactions
+       SET wallet_id = ?, kind = ?, amount_minor = ?, occurred_at = ?, category_id = ?, note = ?
+       WHERE id = ?`,
+      input.walletId,
+      databaseKind[input.kind],
+      input.amountMinor,
+      input.occurredAt,
+      categoryId,
+      input.note?.trim() || null,
+      id,
+    );
+    const updated = await findTransaction(id);
+    if (!updated) throw new Error('Transaction was not found after update');
+    return updated;
   },
 
   async updateExpenseCategory(id, categoryId) {

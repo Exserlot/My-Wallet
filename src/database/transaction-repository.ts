@@ -9,11 +9,21 @@ export type CreateTransactionInput = Readonly<{
   occurredAt: string;
 }>;
 
+export type UpdateTransactionInput = Readonly<{
+  walletId: string;
+  kind: CashFlowKind;
+  amountMinor: number;
+  categoryId: string | null;
+  note: string | null;
+  occurredAt: string;
+}>;
+
 export interface TransactionRepository {
   createTransaction(input: CreateTransactionInput): Promise<Transaction>;
   getTransaction(id: string): Promise<Transaction | null>;
   listRecent(limit?: number, options?: { uncategorizedOnly?: boolean }): Promise<Transaction[]>;
   listInRange(start: string, end: string): Promise<Transaction[]>;
+  updateTransaction(id: string, input: UpdateTransactionInput): Promise<Transaction>;
   updateExpenseCategory(id: string, categoryId: string | null): Promise<Transaction>;
   getTotals(start: string, end: string): Promise<CashFlowTotals>;
 }

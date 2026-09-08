@@ -22,6 +22,7 @@ export type Transaction = Readonly<{
   occurredAt: string;
   note: string | null;
   source: 'manual' | 'bank-slip';
+  kindLocked?: boolean;
 }>;
 
 export type CashFlowTotals = Readonly<{

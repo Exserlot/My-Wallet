@@ -92,8 +92,8 @@ export default function TransactionListScreen() {
             <Pressable
               accessibilityRole="button"
               key={transaction.id}
-              onPress={() => transaction.kind === 'expense' && router.push({ pathname: '/transactions/[id]', params: { id: transaction.id } })}
-              style={({ pressed }) => [styles.transactionCard, pressed && transaction.kind === 'expense' && styles.pressed]}
+              onPress={() => router.push({ pathname: '/transactions/[id]', params: { id: transaction.id } })}
+              style={({ pressed }) => [styles.transactionCard, pressed && styles.pressed]}
             >
               <View style={styles.transactionDetails}>
                 <Text style={styles.transactionTitle}>{transaction.note || (isIncome ? 'รายรับ' : 'รายจ่าย')}</Text>

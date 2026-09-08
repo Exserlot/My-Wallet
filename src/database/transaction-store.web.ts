@@ -20,6 +20,9 @@ function toTransaction(transaction: WebTransaction): Transaction {
     occurredAt: transaction.occurredAt,
     note: transaction.note,
     source: transaction.source,
+    kindLocked: transaction.source === 'bank-slip'
+      || database.fixedCostOccurrences.some((occurrence) => occurrence.expenseId === transaction.id)
+      || database.plannedPurchases.some((purchase) => purchase.expenseId === transaction.id),
   };
 }
 
@@ -70,6 +73,36 @@ export const transactionRepository: TransactionRepository = {
       .filter((transaction) => transaction.occurredAt >= start && transaction.occurredAt < end)
       .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt) || left.createdAt.localeCompare(right.createdAt))
       .map(toTransaction);
+  },
+
+  async updateTransaction(id, input) {
+    if (!isValidCashFlowAmount(input.amountMinor)) throw new Error('Amount must be positive minor units');
+    const database = readWebDatabase();
+    const target = database.transactions.find((transaction) => transaction.id === id);
+    if (!target || target.kind === 'opening-balance') throw new Error('Cash flow transaction not found');
+    const kindLocked = target.source === 'bank-slip'
+      || database.fixedCostOccurrences.some((occurrence) => occurrence.expenseId === target.id)
+      || database.plannedPurchases.some((purchase) => purchase.expenseId === target.id);
+    if (kindLocked && input.kind !== target.kind) throw new Error('Linked transaction kind cannot be changed');
+    if (!database.wallets.some((wallet) => wallet.id === input.walletId)) throw new Error('Wallet not found');
+    const categoryId = categoryIdForCashFlow(input.kind, input.categoryId);
+    if (categoryId && !database.expenseCategories.some((category) => category.id === categoryId)) {
+      throw new Error('Expense category not found');
+    }
+    const updated: WebTransaction = {
+      ...target,
+      walletId: input.walletId,
+      kind: input.kind,
+      amountMinor: input.amountMinor,
+      occurredAt: input.occurredAt,
+      categoryId,
+      note: input.note?.trim() || null,
+    };
+    writeWebDatabase({
+      ...database,
+      transactions: database.transactions.map((transaction) => transaction.id === id ? updated : transaction),
+    });
+    return toTransaction(updated);
   },
 
   async updateExpenseCategory(id, categoryId) {
