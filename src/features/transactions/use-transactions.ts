@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import { transactionRepository } from '@/database/transaction-store';
-import { currentMonthRange, type CashFlowTotals, type Transaction } from '@/domain/transactions';
+import { currentMonthRange, filterTransactions, type CashFlowTotals, type Transaction, type TransactionListOptions } from '@/domain/transactions';
 
 export type TransactionListFilter = Readonly<{
   start: string;
@@ -10,7 +10,9 @@ export type TransactionListFilter = Readonly<{
   categoryIds?: readonly (string | null)[];
 }>;
 
-export function useTransactions(limit = 20, uncategorizedOnly = false, filter?: TransactionListFilter) {
+const noListOptions: TransactionListOptions = {};
+
+export function useTransactions(limit = 20, uncategorizedOnly = false, filter?: TransactionListFilter, listOptions: TransactionListOptions = noListOptions) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totals, setTotals] = useState<CashFlowTotals>({ incomeMinor: 0, expenseMinor: 0 });
   const [loading, setLoading] = useState(true);
@@ -23,12 +25,14 @@ export function useTransactions(limit = 20, uncategorizedOnly = false, filter?: 
       const loaded = filter
         ? await transactionRepository.listInRange(filter.start, filter.end)
         : await transactionRepository.listRecent(limit, { uncategorizedOnly });
-      const filtered = loaded.filter((transaction) => {
+      const reportFiltered = loaded.filter((transaction) => {
         if (uncategorizedOnly) return transaction.kind === 'expense' && transaction.categoryId === null;
         if (!filter?.categoryIds) return true;
         return transaction.kind === 'expense' && filter.categoryIds.includes(transaction.categoryId);
       });
-      const currentTotals = filter || uncategorizedOnly
+      const filtered = filterTransactions(reportFiltered, listOptions);
+      const hasListFilter = Boolean(listOptions.kind || listOptions.query?.trim());
+      const currentTotals = filter || uncategorizedOnly || hasListFilter
         ? filtered.reduce<CashFlowTotals>((totals, transaction) => ({
             incomeMinor: totals.incomeMinor + (transaction.kind === 'income' ? transaction.amount.amountMinor : 0),
             expenseMinor: totals.expenseMinor + (transaction.kind === 'expense' ? transaction.amount.amountMinor : 0),
@@ -41,7 +45,7 @@ export function useTransactions(limit = 20, uncategorizedOnly = false, filter?: 
     } finally {
       setLoading(false);
     }
-  }, [filter, limit, uncategorizedOnly]);
+  }, [filter, limit, listOptions, uncategorizedOnly]);
 
   useFocusEffect(
     useCallback(() => {

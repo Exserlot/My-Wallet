@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { categoryIdForCashFlow, currentMonthRange, isValidCashFlowAmount, localDateInput, occurredAtFromLocalDateInput, relativeLocalDateInput, signedAmountMinor } from './transactions';
+import { categoryIdForCashFlow, currentMonthRange, filterTransactions, isValidCashFlowAmount, localDateInput, occurredAtFromLocalDateInput, relativeLocalDateInput, signedAmountMinor, type Transaction } from './transactions';
 
 describe('signedAmountMinor', () => {
   it('adds income and opening balance', () => {
@@ -53,5 +53,23 @@ describe('transaction dates', () => {
     expect([date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes()]).toEqual([2026, 1, 28, 15, 30]);
     expect(occurredAtFromLocalDateInput('2026-02-30')).toBeNull();
     expect(occurredAtFromLocalDateInput('08/09/2026')).toBeNull();
+  });
+});
+
+describe('filterTransactions', () => {
+  const transaction = (id: string, kind: 'income' | 'expense', note: string | null, walletName: string, categoryName: string | null): Transaction => ({
+    id, walletId: 'wallet', walletName, kind, categoryId: null, categoryName,
+    amount: { amountMinor: 100, currency: 'THB' }, occurredAt: '2026-09-08', note, source: 'manual',
+  });
+  const values = [transaction('1', 'expense', 'ข้าวกลางวัน', 'เงินสด', 'อาหาร'), transaction('2', 'income', 'เงินเดือน', 'ธนาคาร', null)];
+
+  it('searches notes, wallets, and categories without case sensitivity', () => {
+    expect(filterTransactions(values, { query: 'อาหาร' }).map((item) => item.id)).toEqual(['1']);
+    expect(filterTransactions(values, { query: 'ธนาคาร' }).map((item) => item.id)).toEqual(['2']);
+  });
+
+  it('combines text and cash flow kind filters', () => {
+    expect(filterTransactions(values, { kind: 'expense', query: 'เงิน' }).map((item) => item.id)).toEqual(['1']);
+    expect(filterTransactions(values, { kind: 'income', query: 'เงิน' }).map((item) => item.id)).toEqual(['2']);
   });
 });

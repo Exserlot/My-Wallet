@@ -30,6 +30,11 @@ export type CashFlowTotals = Readonly<{
   expenseMinor: number;
 }>;
 
+export type TransactionListOptions = Readonly<{
+  kind?: CashFlowKind;
+  query?: string;
+}>;
+
 export function signedAmountMinor(kind: TransactionKind, amountMinor: number): number {
   return kind === 'expense' ? -amountMinor : amountMinor;
 }
@@ -40,6 +45,17 @@ export function isValidCashFlowAmount(amountMinor: number): boolean {
 
 export function categoryIdForCashFlow(kind: CashFlowKind, categoryId: string | null): string | null {
   return kind === 'expense' ? categoryId : null;
+}
+
+export function filterTransactions(transactions: readonly Transaction[], options: TransactionListOptions): Transaction[] {
+  const query = options.query?.trim().toLocaleLowerCase('th-TH') ?? '';
+  return transactions.filter((transaction) => {
+    if (options.kind && transaction.kind !== options.kind) return false;
+    if (!query) return true;
+    return [transaction.note, transaction.walletName, transaction.categoryName]
+      .filter((value): value is string => Boolean(value))
+      .some((value) => value.toLocaleLowerCase('th-TH').includes(query));
+  });
 }
 
 export function currentMonthRange(now = new Date()): { start: string; end: string } {
