@@ -37,6 +37,18 @@ export const plannedPurchaseRepository: PlannedPurchaseRepository = {
     return toPlannedPurchase(item);
   },
 
+  async update(id, input) {
+    const validationError = validatePlannedPurchase(input);
+    if (validationError) throw new Error(validationError);
+    const database = readWebDatabase();
+    if (input.categoryId && !database.expenseCategories.some((category) => category.id === input.categoryId && category.archivedAt === null)) throw new Error('Expense category not found');
+    const target = database.plannedPurchases.find((item) => item.id === id && item.status === 'active');
+    if (!target) throw new Error('Active planned purchase not found');
+    const updated = { ...target, name: input.name.trim(), quantity: input.quantity, estimatedUnitMinor: input.estimatedUnitMinor, categoryId: input.categoryId, merchant: input.merchant?.trim() || null, note: input.note?.trim() || null, priority: input.priority };
+    writeWebDatabase({ ...database, plannedPurchases: database.plannedPurchases.map((item) => item.id === id ? updated : item) });
+    return toPlannedPurchase(updated);
+  },
+
   async list(options) {
     const priorityOrder = { high: 0, normal: 1, low: 2 } as const;
     return readWebDatabase().plannedPurchases

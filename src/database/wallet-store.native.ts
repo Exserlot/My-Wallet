@@ -11,6 +11,7 @@ type WalletRow = {
   type: WalletType;
   currency: 'THB';
   created_at: string;
+  archived_at: string | null;
   balance_minor: number;
 };
 
@@ -21,6 +22,7 @@ function toWalletSummary(row: WalletRow): WalletSummary {
     type: row.type,
     currency: row.currency,
     createdAt: row.created_at,
+    archivedAt: row.archived_at,
     balanceMinor: row.balance_minor,
   };
 }
@@ -61,11 +63,12 @@ export const walletRepository: WalletRepository = {
       type: input.type,
       currency: 'THB',
       createdAt,
+      archivedAt: null,
       balanceMinor: input.openingBalanceMinor,
     };
   },
 
-  async listWallets() {
+  async listWallets(options) {
     const database = await getDatabase();
     const rows = await database.getAllAsync<WalletRow>(`
       SELECT
@@ -74,6 +77,7 @@ export const walletRepository: WalletRepository = {
         wallets.type,
         wallets.currency,
         wallets.created_at,
+        wallets.archived_at,
         COALESCE((SELECT SUM(
           CASE
             WHEN wallet_transactions.kind IN ('OPENING_BALANCE', 'INCOME') THEN wallet_transactions.amount_minor
@@ -85,6 +89,7 @@ export const walletRepository: WalletRepository = {
         - COALESCE((SELECT SUM(amount_minor) FROM wallet_transfers WHERE from_wallet_id = wallets.id), 0)
         + COALESCE((SELECT SUM(delta_minor) FROM wallet_adjustments WHERE wallet_id = wallets.id), 0) AS balance_minor
       FROM wallets
+      ${options?.includeArchived ? '' : 'WHERE wallets.archived_at IS NULL'}
       ORDER BY wallets.created_at ASC
     `);
     return rows.map(toWalletSummary);
@@ -99,6 +104,21 @@ export const walletRepository: WalletRepository = {
     const wallet = (await walletRepository.listWallets()).find((item) => item.id === input.id);
     if (!wallet) throw new Error('Wallet not found after update');
     return wallet;
+  },
+
+  async archiveWallet(id) {
+    const database = await getDatabase();
+    const activeCount = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM wallets WHERE archived_at IS NULL');
+    if ((activeCount?.count ?? 0) <= 1) throw new Error('At least one wallet must remain active');
+    const schedule = await database.getFirstAsync<{ id: string }>('SELECT id FROM fixed_cost_schedules WHERE wallet_id = ? AND archived_at IS NULL', id);
+    if (schedule) throw new Error('Wallet is used by an active fixed cost');
+    const result = await database.runAsync('UPDATE wallets SET archived_at = ? WHERE id = ? AND archived_at IS NULL', new Date().toISOString(), id);
+    if (result.changes !== 1) throw new Error('Active wallet not found');
+  },
+
+  async restoreWallet(id) {
+    const database = await getDatabase();
+    await database.runAsync('UPDATE wallets SET archived_at = NULL WHERE id = ?', id);
   },
 
   async setWalletBalance(input) {

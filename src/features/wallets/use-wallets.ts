@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { walletRepository } from '@/database/wallet-store';
 import type { WalletSummary } from '@/domain/wallets';
 
-export function useWallets() {
+export function useWallets(includeArchived = false) {
   const [wallets, setWallets] = useState<WalletSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,13 +12,13 @@ export function useWallets() {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      setWallets(await walletRepository.listWallets());
+      setWallets(await walletRepository.listWallets({ includeArchived }));
     } catch {
       setError('ไม่สามารถโหลดข้อมูลกระเป๋าได้');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [includeArchived]);
 
   useFocusEffect(
     useCallback(() => {
@@ -28,4 +28,3 @@ export function useWallets() {
 
   return { wallets, loading, error, refresh };
 }
-

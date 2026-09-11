@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text, TextInput } from '@/components/typography';
 import { buildCashFlowSeries, buildExpenseCategoryReport, customReportRange, type ReportPeriod, type ReportRange } from '@/domain/reports';
 import { formatMoney } from '@/domain/wallets';
 import { useMonthlyBudget } from '@/features/budgets/use-monthly-budget';

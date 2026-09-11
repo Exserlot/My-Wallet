@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text, TextInput } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { NotificationPreferences } from '@/domain/preferences';

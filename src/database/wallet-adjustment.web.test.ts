@@ -45,4 +45,15 @@ describe('web wallet balance adjustment', () => {
     expect(updated.balanceMinor).toBe(100000);
     expect(readWebDatabase().transactions).toHaveLength(1);
   });
+
+  it('archives a wallet without deleting its history and can restore it', async () => {
+    const current = database();
+    writeWebDatabase({ ...current, wallets: [...current.wallets, { id: 'bank', name: 'ธนาคาร', type: 'bank-account', currency: 'THB', createdAt: '2026-09-02' }] });
+    const { walletRepository } = await import('./wallet-store.web');
+    await walletRepository.archiveWallet('cash');
+    expect(await walletRepository.listWallets()).toHaveLength(1);
+    expect((await walletRepository.listWallets({ includeArchived: true })).find((wallet) => wallet.id === 'cash')?.balanceMinor).toBe(100000);
+    await walletRepository.restoreWallet('cash');
+    expect(await walletRepository.listWallets()).toHaveLength(2);
+  });
 });

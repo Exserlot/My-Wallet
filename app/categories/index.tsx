@@ -1,5 +1,8 @@
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text, TextInput } from '@/components/typography';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { expenseCategoryRepository } from '@/database/expense-category-store';
@@ -7,6 +10,21 @@ import { useExpenseCategories } from '@/features/expense-categories/use-expense-
 
 export default function CategoryListScreen() {
   const { categories, loading, error, refresh } = useExpenseCategories(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function saveName() {
+    if (!editingId) return;
+    try {
+      setActionError(null);
+      await expenseCategoryRepository.updateCategory(editingId, editingName);
+      setEditingId(null);
+      await refresh();
+    } catch {
+      setActionError('เปลี่ยนชื่อไม่สำเร็จ ชื่อต้องไม่ว่างหรือซ้ำกับหมวดอื่น');
+    }
+  }
 
   function confirmArchive(id: string, name: string) {
     Alert.alert(
@@ -31,7 +49,7 @@ export default function CategoryListScreen() {
         </Pressable>
 
         {loading ? <Text style={styles.muted}>กำลังโหลด…</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error || actionError ? <Text style={styles.error}>{error ?? actionError}</Text> : null}
         {!loading && categories.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>ยังไม่มีหมวดรายจ่าย</Text>
@@ -42,14 +60,10 @@ export default function CategoryListScreen() {
         {categories.map((category) => (
           <View key={category.id} style={[styles.categoryCard, category.archivedAt && styles.archivedCard]}>
             <View style={styles.categoryInfo}>
-              <Text style={styles.categoryName}>{category.name}</Text>
+              {editingId === category.id ? <TextInput accessibilityLabel="ชื่อหมวดรายจ่าย" autoFocus maxLength={40} onChangeText={setEditingName} style={styles.nameInput} value={editingName} /> : <Text style={styles.categoryName}>{category.name}</Text>}
               <Text style={styles.muted}>{category.archivedAt ? 'เก็บถาวรแล้ว · ยังแสดงในรายการเก่า' : 'พร้อมเลือกกับรายจ่าย'}</Text>
             </View>
-            {!category.archivedAt ? (
-              <Pressable accessibilityRole="button" onPress={() => confirmArchive(category.id, category.name)} style={styles.archiveButton}>
-                <Text style={styles.archiveText}>เก็บถาวร</Text>
-              </Pressable>
-            ) : null}
+            {editingId === category.id ? <View style={styles.actions}><Pressable accessibilityRole="button" onPress={() => setEditingId(null)}><Text style={styles.cancelText}>ยกเลิก</Text></Pressable><Pressable accessibilityRole="button" onPress={() => void saveName()} style={styles.saveSmall}><Text style={styles.saveSmallText}>บันทึก</Text></Pressable></View> : <View style={styles.actions}><Pressable accessibilityRole="button" onPress={() => { setEditingId(category.id); setEditingName(category.name); setActionError(null); }}><Text style={styles.editText}>แก้ไข</Text></Pressable>{category.archivedAt ? <Pressable accessibilityRole="button" onPress={() => void expenseCategoryRepository.restoreCategory(category.id).then(refresh)}><Text style={styles.restoreText}>นำกลับมาใช้</Text></Pressable> : <Pressable accessibilityRole="button" onPress={() => confirmArchive(category.id, category.name)} style={styles.archiveButton}><Text style={styles.archiveText}>เก็บถาวร</Text></Pressable>}</View>}
           </View>
         ))}
       </ScrollView>
@@ -65,7 +79,14 @@ const styles = StyleSheet.create({
   categoryCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 15, backgroundColor: '#FFFEF9' },
   archivedCard: { opacity: 0.62 },
   categoryInfo: { flex: 1 },
+  nameInput: { minHeight: 42, paddingHorizontal: 11, borderWidth: 1, borderColor: '#176B48', borderRadius: 10, color: '#17211B', backgroundColor: '#FFFFFF' },
   categoryName: { color: '#17211B', fontSize: 16, fontWeight: '700' },
+  actions: { alignItems: 'flex-end', gap: 7 },
+  editText: { color: '#176B48', fontWeight: '800' },
+  restoreText: { color: '#176B48', fontSize: 12, fontWeight: '700' },
+  cancelText: { color: '#66736A', fontSize: 12, fontWeight: '700' },
+  saveSmall: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 9, backgroundColor: '#176B48' },
+  saveSmallText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   archiveButton: { paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10, backgroundColor: '#FAE3E0' },
   archiveText: { color: '#A93D38', fontSize: 12, fontWeight: '700' },
   emptyCard: { padding: 22, alignItems: 'center', gap: 5, borderWidth: 1, borderStyle: 'dashed', borderColor: '#B8C1B9', borderRadius: 16 },

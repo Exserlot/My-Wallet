@@ -85,6 +85,23 @@ export const fixedCostRepository: FixedCostRepository = {
     return toSchedule(schedule);
   },
 
+  async updateSchedule(input) {
+    const validationError = validateFixedCostSchedule(input);
+    if (validationError) throw new Error(validationError);
+    const database = readWebDatabase();
+    if (!database.expenseCategories.some((category) => category.id === input.categoryId && category.archivedAt === null)) throw new Error('Expense category not found');
+    if (!database.wallets.some((wallet) => wallet.id === input.walletId)) throw new Error('Wallet not found');
+    const target = database.fixedCostSchedules.find((schedule) => schedule.id === input.id && schedule.archivedAt === null);
+    if (!target) throw new Error('Active fixed cost schedule not found');
+    const updated = { ...target, name: input.name.trim(), categoryId: input.categoryId, estimatedMinor: input.estimatedMinor, walletId: input.walletId, frequency: input.frequency, intervalMonths: input.frequency === 'every-n-months' ? input.intervalMonths : 1, dueDay: input.dueDay, firstDueAt: input.firstDueAt, payee: input.payee?.trim() || null, note: input.note?.trim() || null, remindersEnabled: input.remindersEnabled };
+    writeWebDatabase({
+      ...database,
+      fixedCostSchedules: database.fixedCostSchedules.map((schedule) => schedule.id === input.id ? updated : schedule),
+      fixedCostOccurrences: database.fixedCostOccurrences.filter((occurrence) => occurrence.scheduleId !== input.id || !canResolveFixedCostOccurrence(occurrence.status)),
+    });
+    return toSchedule(updated);
+  },
+
   async listSchedules(options) {
     return readWebDatabase().fixedCostSchedules
       .filter((schedule) => options?.includeArchived || schedule.archivedAt === null)

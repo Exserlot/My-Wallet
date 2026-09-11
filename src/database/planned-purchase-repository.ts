@@ -21,6 +21,7 @@ export type PurchasePlannedItemsInput = Readonly<{
 
 export interface PlannedPurchaseRepository {
   create(input: CreatePlannedPurchaseInput): Promise<PlannedPurchase>;
+  update(id: string, input: CreatePlannedPurchaseInput): Promise<PlannedPurchase>;
   list(options?: { includeCompleted?: boolean }): Promise<PlannedPurchase[]>;
   getMany(ids: string[]): Promise<PlannedPurchase[]>;
   archive(id: string): Promise<void>;

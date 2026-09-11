@@ -1,5 +1,7 @@
 import { router, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { buildDashboardAttentionItems, type DashboardAttentionItem } from '@/domain/attention-items';

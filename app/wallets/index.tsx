@@ -1,5 +1,7 @@
 import { router, type Href } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { formatMoney, type WalletType } from '@/domain/wallets';
@@ -13,9 +15,10 @@ const typeLabels: Record<WalletType, string> = {
 };
 
 export default function WalletListScreen() {
-  const { wallets, loading, error } = useWallets();
+  const { wallets, loading, error } = useWallets(true);
   const { transfers } = useTransfers(5);
-  const totalMinor = wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
+  const activeWallets = wallets.filter((wallet) => !wallet.archivedAt);
+  const totalMinor = activeWallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0);
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -36,23 +39,24 @@ export default function WalletListScreen() {
         ) : null}
 
         {wallets.map((wallet) => (
-          <View key={wallet.id} style={styles.walletCard}>
+          <View key={wallet.id} style={[styles.walletCard, wallet.archivedAt && styles.archived]}>
             <View>
               <Text style={styles.walletName}>{wallet.name}</Text>
               <Text style={styles.walletType}>{typeLabels[wallet.type]}</Text>
+              {wallet.archivedAt ? <Text style={styles.archivedText}>เก็บถาวรแล้ว</Text> : null}
             </View>
             <View style={styles.walletActions}>
               <Text style={styles.walletBalance}>{formatMoney(wallet.balanceMinor)}</Text>
               <View style={styles.walletLinks}>
                 <Pressable accessibilityRole="button" onPress={() => router.push(`/wallets/edit?id=${encodeURIComponent(wallet.id)}` as Href)}><Text style={styles.adjustLink}>แก้ไข</Text></Pressable>
-                <Pressable accessibilityRole="button" onPress={() => router.push(`/wallets/adjust?id=${encodeURIComponent(wallet.id)}` as Href)}><Text style={styles.adjustLink}>ปรับยอด</Text></Pressable>
+                {!wallet.archivedAt ? <Pressable accessibilityRole="button" onPress={() => router.push(`/wallets/adjust?id=${encodeURIComponent(wallet.id)}` as Href)}><Text style={styles.adjustLink}>ปรับยอด</Text></Pressable> : null}
               </View>
             </View>
           </View>
         ))}
 
         <View style={styles.actionRow}>
-        <Pressable accessibilityRole="button" disabled={wallets.length < 2} onPress={() => router.push('/wallets/transfer' as Href)} style={[styles.secondaryButton, wallets.length < 2 && styles.disabled]}><Text style={styles.secondaryText}>⇄ โอนระหว่าง Wallet</Text></Pressable>
+        <Pressable accessibilityRole="button" disabled={activeWallets.length < 2} onPress={() => router.push('/wallets/transfer' as Href)} style={[styles.secondaryButton, activeWallets.length < 2 && styles.disabled]}><Text style={styles.secondaryText}>⇄ โอนระหว่าง Wallet</Text></Pressable>
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/wallets/new')}
@@ -63,7 +67,7 @@ export default function WalletListScreen() {
         </View>
 
         {transfers.length > 0 ? <Text style={styles.sectionTitle}>โอนล่าสุด</Text> : null}
-        {transfers.map((transfer) => <View key={transfer.id} style={styles.transferCard}><View style={styles.transferBody}><Text style={styles.transferTitle}>{transfer.fromWalletName} → {transfer.toWalletName}</Text><Text style={styles.walletType}>{new Date(transfer.occurredAt).toLocaleDateString('th-TH')}{transfer.note ? ` · ${transfer.note}` : ''}</Text></View><Text style={styles.transferAmount}>{formatMoney(transfer.amountMinor)}</Text></View>)}
+        {transfers.map((transfer) => <Pressable accessibilityRole="button" key={transfer.id} onPress={() => router.push(`/wallets/transfer-edit?id=${encodeURIComponent(transfer.id)}` as Href)} style={styles.transferCard}><View style={styles.transferBody}><Text style={styles.transferTitle}>{transfer.fromWalletName} → {transfer.toWalletName}</Text><Text style={styles.walletType}>{new Date(transfer.occurredAt).toLocaleDateString('th-TH')}{transfer.note ? ` · ${transfer.note}` : ''}</Text></View><View style={styles.transferRight}><Text style={styles.transferAmount}>{formatMoney(transfer.amountMinor)}</Text><Text style={styles.editHint}>แตะเพื่อแก้ไข</Text></View></Pressable>)}
       </ScrollView>
     </SafeAreaView>
   );
@@ -76,6 +80,7 @@ const styles = StyleSheet.create({
   totalLabel: { color: '#C9D8CE', fontSize: 14 },
   totalValue: { marginTop: 5, color: '#FFFFFF', fontSize: 30, fontWeight: '800' },
   walletCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 16, borderWidth: 1, borderColor: '#DFE4DA', borderRadius: 16, backgroundColor: '#FFFEF9' },
+  archived: { opacity: 0.6 }, archivedText: { marginTop: 3, color: '#A93D38', fontSize: 11, fontWeight: '700' },
   walletName: { color: '#17211B', fontSize: 17, fontWeight: '700' },
   walletType: { marginTop: 3, color: '#66736A', fontSize: 13 },
   walletBalance: { color: '#173F2B', fontSize: 17, fontWeight: '800' },
@@ -94,6 +99,7 @@ const styles = StyleSheet.create({
   sectionTitle: { marginTop: 5, color: '#17211B', fontSize: 18, fontWeight: '800' },
   transferCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, backgroundColor: '#ECEFE8' },
   transferBody: { flex: 1 }, transferTitle: { color: '#17211B', fontWeight: '700' }, transferAmount: { color: '#176B48', fontWeight: '800' },
+  transferRight: { alignItems: 'flex-end', gap: 3 }, editHint: { color: '#66736A', fontSize: 10 },
   error: { color: '#A93D38' },
   pressed: { opacity: 0.75 },
 });

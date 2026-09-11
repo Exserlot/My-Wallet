@@ -39,4 +39,14 @@ describe('web wallet transfer', () => {
     expect(wallets.reduce((sum, wallet) => sum + wallet.balanceMinor, 0)).toBe(150000);
     expect(readWebDatabase().transfers).toHaveLength(1);
   });
+
+  it('updates and deletes a transfer while recalculating both wallet balances', async () => {
+    const { transferRepository } = await import('./transfer-store.web');
+    const { walletRepository } = await import('./wallet-store.web');
+    const transfer = await transferRepository.createTransfer({ fromWalletId: 'cash', toWalletId: 'bank', amountMinor: 25000, occurredAt: '2026-09-08', note: null });
+    await transferRepository.updateTransfer(transfer.id, { fromWalletId: 'bank', toWalletId: 'cash', amountMinor: 10000, occurredAt: '2026-09-09', note: 'แก้ไข' });
+    expect((await walletRepository.listWallets()).map((wallet) => wallet.balanceMinor)).toEqual([110000, 40000]);
+    await transferRepository.deleteTransfer(transfer.id);
+    expect((await walletRepository.listWallets()).map((wallet) => wallet.balanceMinor)).toEqual([100000, 50000]);
+  });
 });

@@ -212,6 +212,24 @@ export const fixedCostRepository: FixedCostRepository = {
     return schedule;
   },
 
+  async updateSchedule(input) {
+    const validationError = validateFixedCostSchedule(input);
+    if (validationError) throw new Error(validationError);
+    await validateReferences(input);
+    const database = await getDatabase();
+    await database.withExclusiveTransactionAsync(async (transaction) => {
+      const result = await transaction.runAsync(
+        `UPDATE fixed_cost_schedules SET name = ?, category_id = ?, estimated_minor = ?, wallet_id = ?, frequency = ?, interval_months = ?, due_day = ?, first_due_at = ?, payee = ?, note = ?, reminders_enabled = ? WHERE id = ? AND archived_at IS NULL`,
+        input.name.trim(), input.categoryId, input.estimatedMinor, input.walletId, input.frequency, input.frequency === 'every-n-months' ? input.intervalMonths : 1, input.dueDay, input.firstDueAt, input.payee?.trim() || null, input.note?.trim() || null, input.remindersEnabled ? 1 : 0, input.id,
+      );
+      if (result.changes !== 1) throw new Error('Active fixed cost schedule not found');
+      await transaction.runAsync("DELETE FROM fixed_cost_occurrences WHERE schedule_id = ? AND expense_id IS NULL AND status IN ('upcoming', 'due', 'overdue')", input.id);
+    });
+    const updated = await findSchedule(input.id);
+    if (!updated) throw new Error('Fixed cost schedule not found after update');
+    return updated;
+  },
+
   async listSchedules(options) {
     const database = await getDatabase();
     const rows = await database.getAllAsync<ScheduleRow>(

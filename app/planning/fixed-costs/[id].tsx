@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text, TextInput } from '@/components/typography';
 import { fixedCostRepository } from '@/database/fixed-cost-store';
 import { canResolveFixedCostOccurrence, type FixedCostOccurrence } from '@/domain/fixed-costs';
 import { formatMoney, parseMoneyInput } from '@/domain/wallets';

@@ -1,9 +1,10 @@
 import { randomUUID } from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text, TextInput } from '@/components/typography';
 import { bankSlipRepository } from '@/database/bank-slip-store';
 import { canCreateSlipExpense, localDateInput, parseLocalDateInput, type SlipDraft } from '@/domain/bank-slips';
 import { formatMoney, parseMoneyInput } from '@/domain/wallets';

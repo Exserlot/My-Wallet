@@ -1,5 +1,7 @@
-import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fixedCostRepository } from '@/database/fixed-cost-store';
@@ -20,11 +22,11 @@ export default function FixedCostListScreen() {
 
   function confirmArchive(id: string, name: string) {
     Alert.alert(
-      'Archive Fixed Cost?',
+      'เก็บ Fixed Cost ถาวร?',
       `“${name}” จะหยุดสร้างกำหนดจ่ายใหม่ แต่ประวัติเดิมยังอยู่`,
       [
         { text: 'ยกเลิก', style: 'cancel' },
-        { text: 'Archive', style: 'destructive', onPress: () => void fixedCostRepository.archiveSchedule(id).then(refresh) },
+        { text: 'เก็บถาวร', style: 'destructive', onPress: () => void fixedCostRepository.archiveSchedule(id).then(refresh) },
       ],
     );
   }
@@ -67,13 +69,9 @@ export default function FixedCostListScreen() {
               <Text style={styles.itemName}>{schedule.name}</Text>
               <Text style={styles.meta}>{frequencyLabel(schedule.frequency, schedule.intervalMonths)} · วันที่ {schedule.dueDay} · {schedule.walletName}</Text>
               <Text style={styles.meta}>{schedule.categoryName} · ประมาณ {formatMoney(schedule.estimatedMinor)}</Text>
-              {schedule.archivedAt ? <Text style={styles.archivedText}>Archive แล้ว</Text> : null}
+              {schedule.archivedAt ? <Text style={styles.archivedText}>เก็บถาวรแล้ว</Text> : null}
             </View>
-            {!schedule.archivedAt ? (
-              <Pressable accessibilityRole="button" onPress={() => confirmArchive(schedule.id, schedule.name)} style={styles.archiveButton}>
-                <Text style={styles.archiveText}>Archive</Text>
-              </Pressable>
-            ) : null}
+            {!schedule.archivedAt ? <View style={styles.scheduleActions}><Pressable accessibilityRole="button" onPress={() => router.push(`/planning/fixed-costs/edit?id=${encodeURIComponent(schedule.id)}` as Href)}><Text style={styles.editText}>แก้ไข</Text></Pressable><Pressable accessibilityRole="button" onPress={() => confirmArchive(schedule.id, schedule.name)} style={styles.archiveButton}><Text style={styles.archiveText}>เก็บถาวร</Text></Pressable></View> : null}
           </View>
         ))}
 
@@ -102,6 +100,8 @@ const styles = StyleSheet.create({
   danger: { color: '#A93D38' },
   amount: { color: '#17211B', fontWeight: '800' },
   archiveButton: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#FAE3E0' },
+  scheduleActions: { alignItems: 'flex-end', gap: 7 },
+  editText: { color: '#176B48', fontSize: 12, fontWeight: '800' },
   archiveText: { color: '#A93D38', fontSize: 12, fontWeight: '700' },
   archived: { opacity: 0.58 },
   archivedText: { marginTop: 5, color: '#66736A', fontSize: 11, fontWeight: '700' },

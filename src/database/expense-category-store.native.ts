@@ -53,6 +53,21 @@ export const expenseCategoryRepository: ExpenseCategoryRepository = {
     return rows.map(toExpenseCategory);
   },
 
+  async updateCategory(id, name) {
+    if (!isValidExpenseCategoryName(name)) throw new Error('Category name must contain 1 to 40 characters');
+    const database = await getDatabase();
+    try {
+      const result = await database.runAsync('UPDATE expense_categories SET name = ? WHERE id = ?', normalizeExpenseCategoryName(name), id);
+      if (result.changes !== 1) throw new Error('Category not found');
+    } catch (error) {
+      if (error instanceof Error && error.message.toLowerCase().includes('unique')) throw new Error('Category name already exists');
+      throw error;
+    }
+    const row = await database.getFirstAsync<ExpenseCategoryRow>('SELECT id, name, created_at, archived_at FROM expense_categories WHERE id = ?', id);
+    if (!row) throw new Error('Category not found after update');
+    return toExpenseCategory(row);
+  },
+
   async archiveCategory(id) {
     const database = await getDatabase();
     await database.runAsync(
@@ -60,5 +75,10 @@ export const expenseCategoryRepository: ExpenseCategoryRepository = {
       new Date().toISOString(),
       id,
     );
+  },
+
+  async restoreCategory(id) {
+    const database = await getDatabase();
+    await database.runAsync('UPDATE expense_categories SET archived_at = NULL WHERE id = ?', id);
   },
 };

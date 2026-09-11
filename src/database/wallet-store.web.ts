@@ -15,6 +15,7 @@ export const walletRepository: WalletRepository = {
       type: input.type,
       currency: 'THB',
       createdAt,
+      archivedAt: null,
     };
     const openingBalance: WebTransaction | null = input.openingBalanceMinor > 0
       ? {
@@ -40,9 +41,9 @@ export const walletRepository: WalletRepository = {
     return { ...wallet, balanceMinor: input.openingBalanceMinor };
   },
 
-  async listWallets() {
+  async listWallets(options) {
     const database = readWebDatabase();
-    return database.wallets.map<WalletSummary>((wallet) => ({
+    return database.wallets.filter((wallet) => options?.includeArchived || !wallet.archivedAt).map<WalletSummary>((wallet) => ({
       ...wallet,
       balanceMinor: database.transactions
         .filter((transaction) => transaction.walletId === wallet.id)
@@ -68,6 +69,20 @@ export const walletRepository: WalletRepository = {
     const summary = (await walletRepository.listWallets()).find((wallet) => wallet.id === input.id);
     if (!summary) throw new Error('Wallet not found after update');
     return summary;
+  },
+
+  async archiveWallet(id) {
+    const database = readWebDatabase();
+    if (database.wallets.filter((wallet) => !wallet.archivedAt).length <= 1) throw new Error('At least one wallet must remain active');
+    if (database.fixedCostSchedules.some((schedule) => schedule.walletId === id && schedule.archivedAt === null)) throw new Error('Wallet is used by an active fixed cost');
+    const target = database.wallets.find((wallet) => wallet.id === id && !wallet.archivedAt);
+    if (!target) throw new Error('Active wallet not found');
+    writeWebDatabase({ ...database, wallets: database.wallets.map((wallet) => wallet.id === id ? { ...wallet, archivedAt: new Date().toISOString() } : wallet) });
+  },
+
+  async restoreWallet(id) {
+    const database = readWebDatabase();
+    writeWebDatabase({ ...database, wallets: database.wallets.map((wallet) => wallet.id === id ? { ...wallet, archivedAt: null } : wallet) });
   },
 
   async setWalletBalance(input) {

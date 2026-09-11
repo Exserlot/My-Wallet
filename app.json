@@ -10,7 +10,9 @@
     "android": {
       "package": "com.exserlot.mywallet",
       "permissions": [
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
         "android.permission.CAMERA",
@@ -62,11 +64,19 @@
           "photosPermission": "อนุญาตให้ My Wallet เลือกรูปสลิปเพื่อสร้างรายจ่ายในเครื่อง"
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3b48abe9-e0d0-49d6-abb9-2380305407c7"
+      }
+    },
+    "owner": "exserlot01"
   }
 }

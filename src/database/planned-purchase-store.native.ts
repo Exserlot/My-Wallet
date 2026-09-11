@@ -102,6 +102,21 @@ export const plannedPurchaseRepository: PlannedPurchaseRepository = {
     return created;
   },
 
+  async update(id, input) {
+    const validationError = validatePlannedPurchase(input);
+    if (validationError) throw new Error(validationError);
+    await validateCategory(input.categoryId);
+    const database = await getDatabase();
+    const result = await database.runAsync(
+      `UPDATE planned_purchases SET name = ?, quantity = ?, estimated_unit_minor = ?, category_id = ?, merchant = ?, note = ?, priority = ? WHERE id = ? AND status = 'active'`,
+      input.name.trim(), input.quantity, input.estimatedUnitMinor, input.categoryId, input.merchant?.trim() || null, input.note?.trim() || null, input.priority, id,
+    );
+    if (result.changes !== 1) throw new Error('Active planned purchase not found');
+    const [updated] = await findMany([id]);
+    if (!updated) throw new Error('Planned purchase not found after update');
+    return updated;
+  },
+
   async list(options) {
     const database = await getDatabase();
     const rows = await database.getAllAsync<PlannedPurchaseRow>(

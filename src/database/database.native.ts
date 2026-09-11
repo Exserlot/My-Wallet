@@ -203,6 +203,14 @@ async function migrate(database: SQLiteDatabase) {
       CREATE INDEX IF NOT EXISTS wallet_adjustments_wallet_id_idx ON wallet_adjustments(wallet_id, occurred_at DESC);
       PRAGMA user_version = 10;
     `);
+    currentVersion = 10;
+  }
+
+  if (currentVersion === 10) {
+    await database.execAsync(`
+      ALTER TABLE wallets ADD COLUMN archived_at TEXT;
+      PRAGMA user_version = 11;
+    `);
   }
 }
 

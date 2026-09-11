@@ -14,6 +14,8 @@ export type CreateFixedCostScheduleInput = Readonly<{
   remindersEnabled: boolean;
 }>;
 
+export type UpdateFixedCostScheduleInput = CreateFixedCostScheduleInput & Readonly<{ id: string }>;
+
 export type PayFixedCostOccurrenceInput = Readonly<{
   occurrenceId: string;
   walletId: string;
@@ -24,6 +26,7 @@ export type PayFixedCostOccurrenceInput = Readonly<{
 
 export interface FixedCostRepository {
   createSchedule(input: CreateFixedCostScheduleInput): Promise<FixedCostSchedule>;
+  updateSchedule(input: UpdateFixedCostScheduleInput): Promise<FixedCostSchedule>;
   listSchedules(options?: { includeArchived?: boolean }): Promise<FixedCostSchedule[]>;
   listOccurrences(startAt: string, endAt: string): Promise<FixedCostOccurrence[]>;
   getOccurrence(id: string): Promise<FixedCostOccurrence | null>;

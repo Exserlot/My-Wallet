@@ -11,6 +11,7 @@ export default function ShoppingListLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'ของที่ต้องซื้อ' }} />
       <Stack.Screen name="new" options={{ title: 'เพิ่มของที่ต้องซื้อ' }} />
+      <Stack.Screen name="edit" options={{ title: 'แก้ไขของที่ต้องซื้อ' }} />
       <Stack.Screen name="checkout" options={{ title: 'ยืนยันการซื้อ' }} />
     </Stack>
   );

@@ -29,6 +29,20 @@ export const expenseCategoryRepository: ExpenseCategoryRepository = {
       .sort((left, right) => left.name.localeCompare(right.name, 'th'));
   },
 
+  async updateCategory(id, name) {
+    if (!isValidExpenseCategoryName(name)) throw new Error('Category name must contain 1 to 40 characters');
+    const database = readWebDatabase();
+    const normalizedName = normalizeExpenseCategoryName(name);
+    if (database.expenseCategories.some((category) => category.id !== id && category.name.toLocaleLowerCase() === normalizedName.toLocaleLowerCase())) {
+      throw new Error('Category name already exists');
+    }
+    const target = database.expenseCategories.find((category) => category.id === id);
+    if (!target) throw new Error('Category not found');
+    const updated = { ...target, name: normalizedName };
+    writeWebDatabase({ ...database, expenseCategories: database.expenseCategories.map((category) => category.id === id ? updated : category) });
+    return updated;
+  },
+
   async archiveCategory(id) {
     const database = readWebDatabase();
     const archivedAt = new Date().toISOString();
@@ -37,6 +51,14 @@ export const expenseCategoryRepository: ExpenseCategoryRepository = {
       expenseCategories: database.expenseCategories.map((category) => (
         category.id === id && category.archivedAt === null ? { ...category, archivedAt } : category
       )),
+    });
+  },
+
+  async restoreCategory(id) {
+    const database = readWebDatabase();
+    writeWebDatabase({
+      ...database,
+      expenseCategories: database.expenseCategories.map((category) => category.id === id ? { ...category, archivedAt: null } : category),
     });
   },
 };

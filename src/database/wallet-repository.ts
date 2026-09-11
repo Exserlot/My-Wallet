@@ -22,7 +22,9 @@ export type UpdateWalletInput = Readonly<{
 
 export interface WalletRepository {
   createWallet(input: CreateWalletInput): Promise<WalletSummary>;
-  listWallets(): Promise<WalletSummary[]>;
+  listWallets(options?: { includeArchived?: boolean }): Promise<WalletSummary[]>;
   updateWallet(input: UpdateWalletInput): Promise<WalletSummary>;
+  archiveWallet(id: string): Promise<void>;
+  restoreWallet(id: string): Promise<void>;
   setWalletBalance(input: SetWalletBalanceInput): Promise<WalletAdjustment>;
 }

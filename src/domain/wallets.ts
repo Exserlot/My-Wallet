@@ -8,6 +8,7 @@ export type Wallet = Readonly<{
   type: WalletType;
   currency: 'THB';
   createdAt: string;
+  archivedAt?: string | null;
 }>;
 
 export type WalletSummary = Wallet &

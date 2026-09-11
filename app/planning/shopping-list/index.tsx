@@ -1,6 +1,8 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Text } from '@/components/typography';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { plannedPurchaseRepository } from '@/database/planned-purchase-store';
@@ -63,7 +65,7 @@ export default function ShoppingListScreen() {
                 </View>
                 <Text style={styles.amount}>{estimatedTotal === null ? 'ยังไม่ใส่ราคา' : formatMoney(estimatedTotal)}</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" onPress={() => archive(item.id, item.name)} style={styles.archiveButton}><Text style={styles.archiveText}>เก็บถาวร</Text></Pressable>
+              <View style={styles.itemActions}><Pressable accessibilityRole="button" onPress={() => router.push(`/planning/shopping-list/edit?id=${encodeURIComponent(item.id)}` as Href)}><Text style={styles.editText}>แก้ไข</Text></Pressable><Pressable accessibilityRole="button" onPress={() => archive(item.id, item.name)} style={styles.archiveButton}><Text style={styles.archiveText}>เก็บถาวร</Text></Pressable></View>
             </View>
           );
         })}
@@ -108,6 +110,8 @@ const styles = StyleSheet.create({
   meta: { marginTop: 4, color: '#66736A', fontSize: 12 },
   amount: { maxWidth: 120, color: '#526158', fontSize: 12, fontWeight: '700', textAlign: 'right' },
   archiveButton: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 8 },
+  itemActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
+  editText: { color: '#176B48', fontSize: 12, fontWeight: '800' },
   archiveText: { color: '#A93D38', fontSize: 12, fontWeight: '700' },
   checkoutCard: { marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderRadius: 15, backgroundColor: '#173F2B' },
   checkoutTitle: { color: '#FFFFFF', fontWeight: '800' },

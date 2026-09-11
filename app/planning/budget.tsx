@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text, TextInput } from '@/components/typography';
 import { budgetRepository } from '@/database/budget-store';
 import { allocatedTotalMinor } from '@/domain/budgets';
 import { canResolveFixedCostOccurrence } from '@/domain/fixed-costs';

@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text, TextInput } from '@/components/typography';
 import { fixedCostRepository } from '@/database/fixed-cost-store';
 import { clampedDueDate, fixedCostFrequencies, frequencyLabel, type FixedCostFrequency } from '@/domain/fixed-costs';
 import { parseMoneyInput } from '@/domain/wallets';

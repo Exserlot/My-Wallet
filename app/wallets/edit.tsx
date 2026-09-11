@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Text, TextInput } from '@/components/typography';
 import { walletRepository } from '@/database/wallet-store';
 import { validateWalletName, type WalletType } from '@/domain/wallets';
 import { useWallets } from '@/features/wallets/use-wallets';
@@ -13,7 +14,7 @@ const typeOptions: readonly Readonly<{ id: WalletType; label: string }>[] = [
   { id: 'e-wallet', label: 'e-Wallet' },
 ];
 
-function WalletEditForm({ wallet }: Readonly<{ wallet: { id: string; name: string; type: WalletType } }>) {
+function WalletEditForm({ wallet }: Readonly<{ wallet: { id: string; name: string; type: WalletType; archivedAt?: string | null } }>) {
   const [name, setName] = useState(wallet.name);
   const [type, setType] = useState<WalletType>(wallet.type);
   const [saving, setSaving] = useState(false);
@@ -34,6 +35,23 @@ function WalletEditForm({ wallet }: Readonly<{ wallet: { id: string; name: strin
     }
   }
 
+  async function changeArchivedState() {
+    try {
+      setSaving(true); setError(null);
+      if (wallet.archivedAt) await walletRepository.restoreWallet(wallet.id);
+      else await walletRepository.archiveWallet(wallet.id);
+      router.replace('/wallets');
+    } catch {
+      setError('เก็บกระเป๋าไม่ได้ ต้องเหลือกระเป๋าที่ใช้งานอย่างน้อย 1 ใบ และกระเป๋านี้ต้องไม่ถูกใช้กับ Fixed Cost ที่ยังทำงานอยู่');
+      setSaving(false);
+    }
+  }
+
+  function confirmArchive() {
+    if (wallet.archivedAt) { void changeArchivedState(); return; }
+    Alert.alert('เก็บกระเป๋าถาวร?', 'กระเป๋าจะไม่แสดงตอนเพิ่มรายการใหม่ แต่ประวัติและยอดเดิมจะยังอยู่', [{ text: 'ยกเลิก', style: 'cancel' }, { text: 'เก็บถาวร', style: 'destructive', onPress: () => void changeArchivedState() }]);
+  }
+
   return <>
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>ชื่อกระเป๋า</Text>
@@ -46,6 +64,7 @@ function WalletEditForm({ wallet }: Readonly<{ wallet: { id: string; name: strin
     <Text style={styles.hint}>การแก้ชื่อหรือประเภทไม่เปลี่ยนยอดและประวัติรายการของ Wallet</Text>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={({ pressed }) => [styles.saveButton, (pressed || saving) && styles.pressed]}><Text style={styles.saveText}>{saving ? 'กำลังบันทึก…' : 'บันทึกการแก้ไข'}</Text></Pressable>
+    <Pressable accessibilityRole="button" disabled={saving} onPress={confirmArchive} style={styles.archiveButton}><Text style={styles.archiveText}>{wallet.archivedAt ? 'นำกระเป๋ากลับมาใช้' : 'เก็บกระเป๋าถาวร'}</Text></Pressable>
   </>;
 }
 
@@ -65,4 +84,5 @@ const styles = StyleSheet.create({
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, option: { minHeight: 42, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#C9D0C9', borderRadius: 999, backgroundColor: '#FFFEF9' },
   optionActive: { borderColor: '#176B48', backgroundColor: '#DCEDDF' }, optionText: { color: '#66736A', fontWeight: '600' }, optionTextActive: { color: '#176B48' }, hint: { padding: 12, borderRadius: 12, color: '#526158', backgroundColor: '#ECEFE8', lineHeight: 20 },
   error: { color: '#A93D38', lineHeight: 20 }, saveButton: { minHeight: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#176B48' }, saveText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' }, pressed: { opacity: 0.7 },
+  archiveButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#C85A52', borderRadius: 14, backgroundColor: '#FFF8F7' }, archiveText: { color: '#A93D38', fontWeight: '800' },
 });
