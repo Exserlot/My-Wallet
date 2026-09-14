@@ -2,6 +2,7 @@ export const fixedCostFrequencies = ['monthly', 'every-n-months', 'yearly', 'onc
 
 export type FixedCostFrequency = (typeof fixedCostFrequencies)[number];
 export type FixedCostOccurrenceStatus = 'upcoming' | 'due' | 'overdue' | 'paid' | 'skipped';
+export type FixedCostPastDueStrategy = 'include-overdue' | 'next-cycle';
 
 export type FixedCostSchedule = Readonly<{
   id: string;
@@ -64,6 +65,22 @@ function daysInMonth(year: number, monthIndex: number): number {
 
 export function clampedDueDate(year: number, monthIndex: number, dueDay: number): Date {
   return new Date(year, monthIndex, Math.min(dueDay, daysInMonth(year, monthIndex)));
+}
+
+export function firstDueAtForFixedCostEdit(
+  frequency: FixedCostFrequency,
+  intervalMonths: number,
+  dueDay: number,
+  strategy: FixedCostPastDueStrategy,
+  now = new Date(),
+): string {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let due = clampedDueDate(now.getFullYear(), now.getMonth(), dueDay);
+  if (due < today && strategy === 'next-cycle') {
+    const monthsToAdd = frequency === 'yearly' ? 12 : frequency === 'every-n-months' ? intervalMonths : 1;
+    due = clampedDueDate(now.getFullYear(), now.getMonth() + monthsToAdd, dueDay);
+  }
+  return due.toISOString();
 }
 
 export function occurrenceDueAtForMonth(rule: RecurrenceRule, year: number, monthIndex: number): string | null {

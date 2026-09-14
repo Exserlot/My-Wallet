@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canResolveFixedCostOccurrence, clampedDueDate, occurrenceDueAtForMonth, occurrenceStatus, validateFixedCostSchedule } from './fixed-costs';
+import { canResolveFixedCostOccurrence, clampedDueDate, firstDueAtForFixedCostEdit, occurrenceDueAtForMonth, occurrenceStatus, validateFixedCostSchedule } from './fixed-costs';
 
 describe('fixed cost due dates', () => {
   it('uses the final day when a month has no requested day', () => {
@@ -15,6 +15,20 @@ describe('fixed cost due dates', () => {
     const yearly = { ...everyTwoMonths, frequency: 'yearly' as const };
     expect(occurrenceDueAtForMonth(yearly, 2026, 1)).toBeNull();
     expect(occurrenceDueAtForMonth(yearly, 2027, 0)).not.toBeNull();
+  });
+
+  it('moves an edited monthly schedule back to this month when the new due day is still ahead', () => {
+    const now = new Date(2026, 8, 12, 12);
+    const firstDueAt = firstDueAtForFixedCostEdit('monthly', 1, 14, 'next-cycle', now);
+    expect(occurrenceDueAtForMonth({ frequency: 'monthly', intervalMonths: 1, dueDay: 14, firstDueAt }, 2026, 8)).not.toBeNull();
+  });
+
+  it('respects the edit choice when the new due day has already passed', () => {
+    const now = new Date(2026, 8, 12, 12);
+    const overdue = firstDueAtForFixedCostEdit('monthly', 1, 5, 'include-overdue', now);
+    const nextCycle = firstDueAtForFixedCostEdit('monthly', 1, 5, 'next-cycle', now);
+    expect(new Date(overdue).getMonth()).toBe(8);
+    expect(new Date(nextCycle).getMonth()).toBe(9);
   });
 });
 
