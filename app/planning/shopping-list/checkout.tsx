@@ -52,7 +52,7 @@ export default function PlannedPurchaseCheckoutScreen() {
       setSaving(true);
       setError(null);
       await plannedPurchaseRepository.purchase({ itemIds: items.map((item) => item.id), walletId: selectedWalletId, actualMinor, categoryId, note, occurredAt: new Date().toISOString() });
-      router.replace('/planning/shopping-list');
+      router.dismissTo('/planning/shopping-list');
     } catch {
       setError('บันทึกการซื้อไม่สำเร็จ รายการอาจถูกจัดการไปแล้ว');
       setConfirming(false);

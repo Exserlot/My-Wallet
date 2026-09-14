@@ -80,7 +80,7 @@ export default function BudgetEditorScreen() {
         totalMinor: parsedTotal,
         allocations,
       });
-      router.replace('/planning');
+      router.dismissTo('/planning');
     } catch {
       setError('บันทึกงบไม่สำเร็จ กรุณาลองใหม่');
     } finally {

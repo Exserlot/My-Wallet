@@ -91,7 +91,7 @@ export default function EditTransactionScreen() {
     setSaving(true);
     setError(null);
     void transactionRepository.deleteTransaction(transaction.id).then(() => {
-      router.replace('/transactions');
+      router.dismissTo('/transactions');
     }).catch(() => {
       setError('ลบรายการไม่สำเร็จ กรุณาลองใหม่');
       setSaving(false);

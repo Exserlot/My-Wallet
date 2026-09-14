@@ -36,7 +36,7 @@ export default function EditFixedCostScreen() {
     const validationError = validateFixedCostSchedule({ name, estimatedMinor, intervalMonths: parsedInterval, dueDay: parsedDueDay });
     if (validationError) return setError('กรุณาตรวจชื่อ จำนวนเงิน ความถี่ และวันครบกำหนด');
     const nextFirstDueAt = firstDueAtForFixedCostEdit(frequency, parsedInterval, parsedDueDay, pastDueStrategy);
-    try { setSaving(true); setError(null); await fixedCostRepository.updateSchedule({ id, name, categoryId, estimatedMinor, walletId, frequency, intervalMonths: frequency === 'every-n-months' ? parsedInterval : 1, dueDay: parsedDueDay, firstDueAt: nextFirstDueAt, payee, note, remindersEnabled: reminders }); router.replace('/planning/fixed-costs'); }
+    try { setSaving(true); setError(null); await fixedCostRepository.updateSchedule({ id, name, categoryId, estimatedMinor, walletId, frequency, intervalMonths: frequency === 'every-n-months' ? parsedInterval : 1, dueDay: parsedDueDay, firstDueAt: nextFirstDueAt, payee, note, remindersEnabled: reminders }); router.dismissTo('/planning/fixed-costs'); }
     catch { setError('บันทึกการแก้ไขไม่สำเร็จ'); } finally { setSaving(false); }
   }
 

@@ -39,7 +39,7 @@ export default function AdjustWalletScreen() {
         occurredAt: new Date().toISOString(),
         note: note || null,
       });
-      router.replace('/wallets');
+      router.dismissTo('/wallets');
     } catch {
       setError('ปรับยอดไม่สำเร็จ กรุณาลองใหม่');
     } finally {

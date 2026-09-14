@@ -64,7 +64,7 @@ export default function FixedCostOccurrenceScreen() {
         occurredAt: new Date().toISOString(),
         updateScheduleWallet,
       });
-      router.replace('/planning/fixed-costs');
+      router.dismissTo('/planning/fixed-costs');
     } catch {
       setError('ยืนยันจ่ายไม่สำเร็จ รายการอาจถูกจัดการไปแล้ว');
       setConfirming(null);
@@ -79,7 +79,7 @@ export default function FixedCostOccurrenceScreen() {
       setSaving(true);
       setError(null);
       await fixedCostRepository.skipOccurrence(occurrence.id);
-      router.replace('/planning/fixed-costs');
+      router.dismissTo('/planning/fixed-costs');
     } catch {
       setError('ข้ามรายการไม่สำเร็จ รายการอาจถูกจัดการไปแล้ว');
       setConfirming(null);

@@ -56,7 +56,7 @@ export default function NewTransactionScreen() {
         note: note || null,
         occurredAt,
       });
-      router.replace('/transactions');
+      router.dismissTo('/transactions');
     } catch {
       setError('บันทึกรายการไม่สำเร็จ กรุณาลองใหม่');
     } finally {

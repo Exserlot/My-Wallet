@@ -42,7 +42,7 @@ export default function NewWalletScreen() {
         openingBalanceMinor,
         occurredAt: new Date().toISOString(),
       });
-      router.replace('/wallets');
+      router.dismissTo('/wallets');
     } catch {
       setError('สร้างกระเป๋าไม่สำเร็จ กรุณาลองใหม่');
     } finally {

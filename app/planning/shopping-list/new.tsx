@@ -37,7 +37,7 @@ export default function NewPlannedPurchaseScreen() {
       setSaving(true);
       setError(null);
       await plannedPurchaseRepository.create({ name, quantity: parsedQuantity, estimatedUnitMinor, categoryId, merchant, note, priority });
-      router.replace('/planning/shopping-list');
+      router.dismissTo('/planning/shopping-list');
     } catch {
       setError('เพิ่มรายการไม่สำเร็จ กรุณาลองใหม่');
     } finally {

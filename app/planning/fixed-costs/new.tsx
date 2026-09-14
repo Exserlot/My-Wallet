@@ -82,7 +82,7 @@ export default function NewFixedCostScreen() {
         note: note || null,
         remindersEnabled: savedRemindersEnabled,
       });
-      router.replace('/planning/fixed-costs');
+      router.dismissTo('/planning/fixed-costs');
     } catch {
       setError('บันทึก Fixed Cost ไม่สำเร็จ');
     } finally {

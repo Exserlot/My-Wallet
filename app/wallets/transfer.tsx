@@ -28,7 +28,7 @@ export default function NewTransferScreen() {
     try {
       setSaving(true); setError(null);
       await transferRepository.createTransfer({ fromWalletId: sourceId!, toWalletId: destinationId!, amountMinor: amountMinor!, occurredAt: new Date().toISOString(), note: note || null });
-      router.replace('/wallets');
+      router.dismissTo('/wallets');
     } catch { setError('บันทึกการโอนไม่สำเร็จ'); }
     finally { setSaving(false); }
   }

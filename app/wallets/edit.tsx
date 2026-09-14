@@ -27,7 +27,7 @@ function WalletEditForm({ wallet }: Readonly<{ wallet: { id: string; name: strin
       setSaving(true);
       setError(null);
       await walletRepository.updateWallet({ id: wallet.id, name, type });
-      router.replace('/wallets');
+      router.dismissTo('/wallets');
     } catch {
       setError('แก้ไขกระเป๋าไม่สำเร็จ กรุณาลองใหม่');
     } finally {
@@ -40,7 +40,7 @@ function WalletEditForm({ wallet }: Readonly<{ wallet: { id: string; name: strin
       setSaving(true); setError(null);
       if (wallet.archivedAt) await walletRepository.restoreWallet(wallet.id);
       else await walletRepository.archiveWallet(wallet.id);
-      router.replace('/wallets');
+      router.dismissTo('/wallets');
     } catch {
       setError('เก็บกระเป๋าไม่ได้ ต้องเหลือกระเป๋าที่ใช้งานอย่างน้อย 1 ใบ และกระเป๋านี้ต้องไม่ถูกใช้กับ Fixed Cost ที่ยังทำงานอยู่');
       setSaving(false);

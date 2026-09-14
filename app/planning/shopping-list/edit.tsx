@@ -45,7 +45,7 @@ export default function EditPlannedPurchaseScreen() {
     try {
       setSaving(true); setError(null);
       await plannedPurchaseRepository.update(id, { name, quantity: parsedQuantity, estimatedUnitMinor, categoryId, merchant, note, priority });
-      router.replace('/planning/shopping-list');
+      router.dismissTo('/planning/shopping-list');
     } catch { setError('บันทึกการแก้ไขไม่สำเร็จ'); } finally { setSaving(false); }
   }
 
